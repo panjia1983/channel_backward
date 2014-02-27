@@ -7,7 +7,6 @@
 namespace Needle {
   struct NeedleProblemHelper : public boost::enable_shared_from_this<NeedleProblemHelper> {
     enum Method { Colocation = 1, Shooting = 2 };
-    enum SpeedFormulation { ConstantSpeed = 1, VariableSpeed = 2 };
     enum RotationCost { UseRotationQuadraticCost = 1, UseRotationL1Cost = 2 };
     // Config parameters
     vector<Vector6d> starts;
@@ -26,7 +25,6 @@ namespace Needle {
     bool record_trust_region_history;
     vector<int> Ts;
     int n_dof;
-    int speed_formulation;
     int method;
     int rotation_cost;
     bool use_speed_deviation_constraint;
@@ -81,7 +79,6 @@ namespace Needle {
     void InitTrajectory(OptProb& prob, NeedleProblemInstancePtr pi);
     void AddRotationCost(OptProb& prob, NeedleProblemInstancePtr pi);
     void AddSpeedCost(OptProb& prob, NeedleProblemInstancePtr pi);
-    void AddSpeedConstraint(OptProb& prob, NeedleProblemInstancePtr pi);
     void AddStartConstraint(OptProb& prob, NeedleProblemInstancePtr pi);
     void AddGoalConstraint(OptProb& prob, NeedleProblemInstancePtr pi);
     void AddChannelConstraint(OptProb& prob, NeedleProblemInstancePtr pi);
@@ -97,9 +94,7 @@ namespace Needle {
     Matrix4d TransformPose(const Matrix4d& pose, double phi, double Delta, double radius) const;
     double GetPhi(const DblVec& x, int i, NeedleProblemInstancePtr pi) const;
     double GetDelta(const DblVec& x, int i, NeedleProblemInstancePtr pi) const;
-    double GetCurvatureOrRadius(const DblVec& x, int i, NeedleProblemInstancePtr pi) const;
     double GetCurvature(const DblVec& x, int i, NeedleProblemInstancePtr pi) const;
-    double GetRadius(const DblVec& x, int i, NeedleProblemInstancePtr pi) const;
 
     vector<VectorXd> GetSolutions(OptimizerT& opt);
     vector< vector<Vector6d> > GetStates(OptimizerT& opt);

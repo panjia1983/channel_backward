@@ -18,31 +18,6 @@ namespace Needle {
     NeedleProblemInstancePtr pi;
   };
 
-  class VariableSpeedCost : public Cost {
-  public:
-    VariableSpeedCost(const VarVector& vars, double coeff, NeedleProblemHelperPtr helper);
-    virtual double value(const vector<double>& xvec, Model* model);
-    virtual ConvexObjectivePtr convex(const vector<double>& xvec);
-  private:
-    VarVector vars;
-    double coeff;
-    AffExpr expr;
-    NeedleProblemHelperPtr helper;
-  };
-
-  class SpeedDeviationCost: public Cost {
-  public:
-    SpeedDeviationCost(const VarVector& vars, double deviation, double coeff, NeedleProblemHelperPtr helper);
-    virtual double value(const vector<double>& xvec, Model* model);
-    virtual ConvexObjectivePtr convex(const vector<double>& xvec);
-  private:
-    VarVector vars;
-    double coeff;
-    double deviation;
-    QuadExpr expr;
-    NeedleProblemHelperPtr helper;
-  };
-
   class RotationQuadraticCost : public Cost {
   public:
     RotationQuadraticCost(const VarVector& vars, double coeff, NeedleProblemHelperPtr helper);

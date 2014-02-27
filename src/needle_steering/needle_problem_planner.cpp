@@ -442,12 +442,12 @@ namespace Needle {
     
     double phi = helper->GetPhi(this->x, current_open_sim_index, helper->pis.front());
     double Delta = helper->GetDelta(this->x, current_open_sim_index, helper->pis.front());
-    double curvature_or_radius = helper->GetCurvatureOrRadius(this->x, current_open_sim_index, helper->pis.front());
+    double curvature = helper->GetCurvature(this->x, current_open_sim_index, helper->pis.front());
 
 
     //cout << "phi: " << phi << endl;
     //cout << "Delta: " << Delta << endl;
-    //cout << "curvature or radius: " << curvature_or_radius << endl;
+    //cout << "curvature: " << curvature << endl;
 
     if (this->is_first_needle_run) {
       simulated_needle_trajectories.push_back(vector<Vector6d>());
@@ -455,7 +455,7 @@ namespace Needle {
     }
     Vector6d state_to_change = simulated_needle_trajectories.back().back();
 
-    Vector6d new_state_without_noise = logDown(helper->TransformPose(expUp(state_to_change), phi, Delta, curvature_or_radius));
+    Vector6d new_state_without_noise = logDown(helper->TransformPose(expUp(state_to_change), phi, Delta, curvature));
     cout << "perturbing state" << endl;
     Vector6d new_state = PerturbState(new_state_without_noise);
     this->deviation = (new_state_without_noise - new_state).norm();

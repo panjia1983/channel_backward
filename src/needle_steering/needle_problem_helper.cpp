@@ -26,20 +26,8 @@ namespace Needle {
   }
 
   void NeedleProblemHelper::AddSpeedCost(OptProb& prob, NeedleProblemInstancePtr pi) {
-    switch (speed_formulation) {
-      case ConstantSpeed:
-        prob.addCost(CostPtr(new ConstantSpeedCost(pi->Deltavar, coeff_speed, shared_from_this(), pi)));
-        this->speed_costs.push_back(prob.getCosts().back());
-        break;
-      case VariableSpeed:
-        prob.addCost(CostPtr(new VariableSpeedCost(pi->Deltavars.col(0), coeff_speed, shared_from_this())));
-        this->speed_costs.push_back(prob.getCosts().back());
-        if (use_speed_deviation_cost) {
-          prob.addCost(CostPtr(new SpeedDeviationCost(pi->Deltavars.col(0), pi->Delta_lb, coeff_speed, shared_from_this())));
-        }
-        break;
-      SWITCH_DEFAULT;
-    }
+    prob.addCost(CostPtr(new ConstantSpeedCost(pi->Deltavar, coeff_speed, shared_from_this(), pi)));
+    this->speed_costs.push_back(prob.getCosts().back());
   }
 
   void NeedleProblemHelper::ConfigureProblem(OptProb& prob) {
@@ -56,13 +44,11 @@ namespace Needle {
       CreateVariables(prob, pi);
       InitLocalConfigurations(this->robots[i], prob, pi);
       InitTrajectory(prob, pi);
-      //if (!this->channel_planning) {
-        AddRotationCost(prob, pi);
-      //}
+
+      AddRotationCost(prob, pi);
       AddSpeedCost(prob, pi);
       AddStartConstraint(prob, pi);
       AddGoalConstraint(prob, pi);
-      AddSpeedConstraint(prob, pi);
       if (this->channel_planning) {
         AddChannelConstraint(prob, pi);
         AddTotalCurvatureConstraint(prob, pi);
@@ -105,32 +91,16 @@ namespace Needle {
   void NeedleProblemHelper::AddTotalCurvatureConstraint(OptProb& prob, NeedleProblemInstancePtr pi) {
     VectorOfVectorPtr f(new Needle::TotalCurvatureError(this->total_curvature_limit, shared_from_this(), pi));
     VectorXd coeffs(1); coeffs << 1.;
-    VarVector vars = pi->curvature_or_radius_vars.flatten();
-    switch (this->speed_formulation) {
-      case ConstantSpeed:
-        vars = concat(vars, singleton<Var>(pi->Deltavar));
-        break;
-      case VariableSpeed:
-        vars = concat(vars, pi->Deltavars.flatten());
-        break;
-      SWITCH_DEFAULT;
-    }
+    VarVector vars = pi->curvature_vars.flatten();
+    vars = concat(vars, singleton<Var>(pi->Deltavar));
     prob.addConstraint(ConstraintPtr(new ConstraintFromFunc(f, vars, coeffs, INEQ, (boost::format("total_curvature_constraint_collision_%i")%pi->id).str())));
   }
 
   void NeedleProblemHelper::AddTotalCurvatureCost(OptProb& prob, NeedleProblemInstancePtr pi) {
     VectorOfVectorPtr f(new Needle::TotalCurvatureCostError(this->total_curvature_limit, shared_from_this(), pi));
     VectorXd coeffs(1); coeffs << 2.;
-    VarVector vars = pi->curvature_or_radius_vars.flatten();
-    switch (this->speed_formulation) {
-      case ConstantSpeed:
-        vars = concat(vars, singleton<Var>(pi->Deltavar));
-        break;
-      case VariableSpeed:
-        vars = concat(vars, pi->Deltavars.flatten());
-        break;
-      SWITCH_DEFAULT;
-    }
+    VarVector vars = pi->curvature_vars.flatten();
+    vars = concat(vars, singleton<Var>(pi->Deltavar));
     prob.addCost(CostPtr(new CostFromErrFunc(f, vars, coeffs, ABS, (boost::format("total_curvature_cost_%i")%pi->id).str())));
   }
 
@@ -150,23 +120,14 @@ namespace Needle {
         for (int i = 0; i < pi->T; ++i) {
           pi->initVec.push_back(0.);
         }
-        switch (speed_formulation) {
-          case ConstantSpeed:
-            // Initialize Delta
-            pi->initVec.push_back(pi->Delta_lb);
-            break;
-          case VariableSpeed:
-            for (int i = 0; i < pi->T; ++i) {
-              pi->initVec.push_back(pi->Delta_lb);
-            }
-            break;
-          SWITCH_DEFAULT;
-        }
+
+        // Initialize Delta
+        pi->initVec.push_back(pi->Delta_lb);
+
         // Initialize time frame radii
         for (int i = 0; i < pi->T; ++i) {
           pi->initVec.push_back(1.0 / (r_min*20));
         }
-
 
         for (int i = 0; i < pi->initVec.size(); ++i) {
           initVec.push_back(pi->initVec[i]);
@@ -176,10 +137,10 @@ namespace Needle {
     opt.initialize(initVec);
   }
 
-  Matrix4d NeedleProblemHelper::TransformPose(const Matrix4d& pose, double phi, double Delta, double curvature_or_radius) const {
+  Matrix4d NeedleProblemHelper::TransformPose(const Matrix4d& pose, double phi, double Delta, double curvature) const {
     double theta;
     Delta = -Delta;
-    theta = Delta * curvature_or_radius;
+    theta = Delta * curvature;
     Vector6d w; w << 0, 0, Delta, theta, 0, phi;
     return pose * expUp(w);
   }
@@ -189,25 +150,11 @@ namespace Needle {
   }
 
   double NeedleProblemHelper::GetDelta(const DblVec& x, int i, NeedleProblemInstancePtr pi) const {
-    switch (speed_formulation) {
-      case ConstantSpeed:
-        return x[pi->Deltavar.var_rep->index];
-      case VariableSpeed:
-        return x[pi->Deltavars.row(i)[0].var_rep->index];
-      SWITCH_DEFAULT;
-    }
-  }
-
-  double NeedleProblemHelper::GetCurvatureOrRadius(const DblVec& x, int i, NeedleProblemInstancePtr pi) const {
-    return GetCurvature(x, i, pi);
+    return x[pi->Deltavar.var_rep->index];
   }
   
   double NeedleProblemHelper::GetCurvature(const DblVec& x, int i, NeedleProblemInstancePtr pi) const {
-    return x[pi->curvature_or_radius_vars.row(i)[0].var_rep->index];
-  }
-
-  double NeedleProblemHelper::GetRadius(const DblVec& x, int i, NeedleProblemInstancePtr pi) const {
-    return x[pi->curvature_or_radius_vars.row(i)[0].var_rep->index];
+    return x[pi->curvature_vars.row(i)[0].var_rep->index];
   }
 
   bool NeedleProblemHelper::OptimizerCallback(OptProb*, DblVec& x) {
@@ -231,8 +178,8 @@ namespace Needle {
           for (int j = pis[i]->T-1; j >=0; --j) {
             double phi = GetPhi(x, j, pis[i]);
             double Delta = GetDelta(x, j, pis[i]);
-            double curvature_or_radius = GetCurvatureOrRadius(x, j, pis[i]);
-            pis[i]->local_configs[j]->pose = TransformPose(pis[i]->local_configs[j+1]->pose, phi, Delta, curvature_or_radius);
+            double curvature = GetCurvature(x, j, pis[i]);
+            pis[i]->local_configs[j]->pose = TransformPose(pis[i]->local_configs[j+1]->pose, phi, Delta, curvature);
           }
           setVec(x, pis[i]->twistvars.m_data, DblVec(pis[i]->twistvars.size(), 0));
         }
@@ -274,18 +221,8 @@ namespace Needle {
     AddVarArray(prob, pi->T+1, n_dof, "twist", pi->twistvars);
     AddVarArray(prob, pi->T, 1, -PI, PI, "phi", pi->phivars);
     pi->Delta_lb = (expUp(pi->goal).topRightCorner<3, 1>() - expUp(pi->start).topRightCorner<3, 1>()).norm() / pi->T;
-    switch (speed_formulation) {
-      case ConstantSpeed:
-        pi->Deltavar = prob.createVariables(singleton<string>("Delta"), singleton<double>(pi->Delta_lb),singleton<double>(INFINITY))[0];
-        break;
-      case VariableSpeed: {
-        double deviate_from = (pi->goal.topRows(3) - pi->start.topRows(3)).norm() / pi->T * 0.5;
-        AddVarArray(prob, pi->T, 1, deviate_from, INFINITY, "speed", pi->Deltavars);
-        break;
-      }
-      SWITCH_DEFAULT;
-    }
-    AddVarArray(prob, pi->T, 1, 1. / (r_min*30), 1. / r_min, "curvature", pi->curvature_or_radius_vars);
+    pi->Deltavar = prob.createVariables(singleton<string>("Delta"), singleton<double>(pi->Delta_lb),singleton<double>(INFINITY))[0];
+    AddVarArray(prob, pi->T, 1, 1. / (r_min*30), 1. / r_min, "curvature", pi->curvature_vars);
   }
 
   void NeedleProblemHelper::InitLocalConfigurations(const KinBodyPtr robot, OptProb& prob, NeedleProblemInstancePtr pi) {
@@ -363,27 +300,11 @@ namespace Needle {
     pi->dynamics_constraints.push_back(prob.getConstraints().back());
   }
 
-  void NeedleProblemHelper::AddSpeedConstraint(OptProb& prob, NeedleProblemInstancePtr pi) {
-    if (speed_formulation == VariableSpeed && use_speed_deviation_constraint) {
-      VectorOfVectorPtr f(new Needle::SpeedDeviationError(pi->Delta_lb, shared_from_this()));
-      Vector1d coeffs = Vector1d::Ones();
-      prob.addConstraint(ConstraintPtr(new ConstraintFromFunc(f, pi->Deltavars.col(0), coeffs, INEQ, "speed deviation")));
-    }
-  }
-
   void NeedleProblemHelper::AddControlConstraint(OptProb& prob, NeedleProblemInstancePtr pi) {
     for (int i = 0; i < pi->T; ++i) {
       VarVector vars = concat(concat(pi->twistvars.row(i), pi->twistvars.row(i+1)), pi->phivars.row(i));
-      switch (speed_formulation) {
-        case ConstantSpeed:
-          vars.push_back(pi->Deltavar);
-          break;
-        case VariableSpeed:
-          vars = concat(vars, pi->Deltavars.row(i));
-          break;
-        SWITCH_DEFAULT;
-      }
-      vars = concat(vars, pi->curvature_or_radius_vars.row(i));
+      vars.push_back(pi->Deltavar);
+      vars = concat(vars, pi->curvature_vars.row(i));
       VectorOfVectorPtr f(new Needle::ControlError(pi->local_configs[i], pi->local_configs[i+1], shared_from_this()));
       VectorXd coeffs = VectorXd::Ones(boost::static_pointer_cast<Needle::ControlError>(f)->outputSize());
       coeffs.tail<3>() *= this->coeff_orientation_error;
@@ -395,16 +316,8 @@ namespace Needle {
   void NeedleProblemHelper::AddPoseConstraint(OptProb& prob, NeedleProblemInstancePtr pi) {
     for (int i = 0; i < pi->T; ++i) {
       VarVector vars = concat(pi->twistvars.row(i), pi->twistvars.row(i+1));
-      switch (speed_formulation) {
-        case ConstantSpeed:
-          vars.push_back(pi->Deltavar);
-          break;
-        case VariableSpeed:
-          vars = concat(vars, pi->Deltavars.row(i));
-          break;
-        SWITCH_DEFAULT;
-      }
-      vars = concat(vars, pi->curvature_or_radius_vars.row(i));
+      vars.push_back(pi->Deltavar);
+      vars = concat(vars, pi->curvature_vars.row(i));
 
       VectorOfVectorPtr f(new Needle::PoseError(pi->local_configs[i], pi->local_configs[i+1], shared_from_this()));
       VectorXd coeffs = VectorXd::Ones(6);
@@ -477,7 +390,6 @@ namespace Needle {
     this->r_min = 5;
     this->n_dof = 6;
 
-    this->speed_formulation = NeedleProblemHelper::ConstantSpeed;
     this->method = NeedleProblemHelper::Colocation;
     this->rotation_cost = NeedleProblemHelper::UseRotationQuadraticCost;
     this->use_speed_deviation_constraint = false;
@@ -522,7 +434,6 @@ namespace Needle {
     
     Config config;
     config.add(new Parameter<int>("method", &this->method, "method"));
-    config.add(new Parameter<int>("speed_formulation", &this->speed_formulation, "speed_formulation"));
     config.add(new Parameter<int>("rotation_cost", &this->rotation_cost, "rotation_cost"));
     config.add(new Parameter<double>("coeff_rotation_regularization", &this->coeff_rotation_regularization, "coeff_rotation_regularization"));
     config.add(new Parameter<double>("coeff_rotation", &this->coeff_rotation, "coeff_rotation"));
@@ -643,9 +554,9 @@ namespace Needle {
       for (int j = pis[i]->T-1; j >=0; --j) {
         double phi = GetPhi(x, j, pis[i]);
         double Delta = GetDelta(x, j, pis[i]);
-        double curvature_or_radius = GetCurvatureOrRadius(x, j, pis[i]);
-        //cout << "phi: " << phi << "; Delta: " << Delta << "; currad: " << curvature_or_radius << endl;
-        pis[i]->local_configs[j]->pose = TransformPose(pis[i]->local_configs[j+1]->pose, phi, Delta, curvature_or_radius);
+        double curvature = GetCurvature(x, j, pis[i]);
+        //cout << "phi: " << phi << "; Delta: " << Delta << "; currad: " << curvature << endl;
+        pis[i]->local_configs[j]->pose = TransformPose(pis[i]->local_configs[j+1]->pose, phi, Delta, curvature);
       }
       setVec(x, pis[i]->twistvars.m_data, DblVec(pis[i]->twistvars.size(), 0));
     }

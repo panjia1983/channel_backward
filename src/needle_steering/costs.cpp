@@ -8,7 +8,6 @@
 namespace Needle {
 
   ConstantSpeedCost::ConstantSpeedCost(const Var& var, double coeff, NeedleProblemHelperPtr helper, NeedleProblemInstancePtr pi) : Cost("Speed"), var(var), coeff(coeff), helper(helper), pi(pi) {
-    assert (helper->speed_formulation == NeedleProblemHelper::ConstantSpeed);
     exprInc(expr, exprMult(var, coeff * pi->T));
   }
 
@@ -20,42 +19,6 @@ namespace Needle {
   ConvexObjectivePtr ConstantSpeedCost::convex(const vector<double>& xvec) {
     ConvexObjectivePtr out(new ConvexObjective());
     out->addAffExpr(expr);
-    return out;
-  }
-
-  VariableSpeedCost::VariableSpeedCost(const VarVector& vars, double coeff, NeedleProblemHelperPtr helper) : Cost("Speed"), vars(vars), coeff(coeff), helper(helper) {
-    assert (helper->speed_formulation == NeedleProblemHelper::VariableSpeed);
-    for (int i = 0; i < vars.size(); ++i) {
-      exprInc(expr, exprMult(vars[i], coeff));
-    }
-  }
-
-  double VariableSpeedCost::value(const vector<double>& xvec, Model* model) {
-    VectorXd speeds = getVec(xvec, vars);
-    return coeff * speeds.array().sum();
-  }
-
-  ConvexObjectivePtr VariableSpeedCost::convex(const vector<double>& xvec) {
-    ConvexObjectivePtr out(new ConvexObjective());
-    out->addAffExpr(expr);
-    return out;
-  }
-
-  SpeedDeviationCost::SpeedDeviationCost(const VarVector& vars, double deviation, double coeff, NeedleProblemHelperPtr helper) : Cost("Speed"), vars(vars), deviation(deviation), coeff(coeff), helper(helper) {
-    assert (helper->speed_formulation == NeedleProblemHelper::VariableSpeed);
-    for (int i = 0; i < vars.size(); ++i) {
-      exprInc(expr, exprMult(exprSquare(exprAdd(AffExpr(vars[i]), -deviation)), coeff));
-    }
-  }
-
-  double SpeedDeviationCost::value(const vector<double>& xvec, Model* model) {
-    VectorXd speeds = getVec(xvec, vars);
-    return coeff * (speeds.array() - deviation).square().sum();
-  }
-
-  ConvexObjectivePtr SpeedDeviationCost::convex(const vector<double>& xvec) {
-    ConvexObjectivePtr out(new ConvexObjective());
-    out->addQuadExpr(expr);
     return out;
   }
 

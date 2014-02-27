@@ -22,8 +22,8 @@ namespace Needle {
     if (Deltavar.var_rep) {
       ret = concat(ret, getVec(x, singleton<Var>(Deltavar)));
     }
-    if (curvature_or_radius_vars.size()) {
-      ret = concat(ret, getVec(x, curvature_or_radius_vars.flatten()));
+    if (curvature_vars.size()) {
+      ret = concat(ret, getVec(x, curvature_vars.flatten()));
     }
     return ret;
   }
@@ -60,9 +60,9 @@ namespace Needle {
       cout << "solution Delta: " << sol.middleRows(offset, 1).transpose() << endl;
       offset += 1;
     }
-    if (curvature_or_radius_vars.size()) {
-      cout << "solution curvature or radius: " << sol.middleRows(offset, curvature_or_radius_vars.size()).transpose() << endl;
-      offset += curvature_or_radius_vars.size();
+    if (curvature_vars.size()) {
+      cout << "solution curvature: " << sol.middleRows(offset, curvature_vars.size()).transpose() << endl;
+      offset += curvature_vars.size();
     }
 
 
@@ -92,9 +92,9 @@ namespace Needle {
       ret = concat(ret, toDblVec(sol.middleRows(offset, 1)));
       offset += 1;
     } 
-    if (curvature_or_radius_vars.size()) {
-      ret = concat(ret, toDblVec(sol.middleRows(offset + 1, curvature_or_radius_vars.size() - 1)));
-      offset += curvature_or_radius_vars.size();
+    if (curvature_vars.size()) {
+      ret = concat(ret, toDblVec(sol.middleRows(offset + 1, curvature_vars.size() - 1)));
+      offset += curvature_vars.size();
     }
     return toVectorXd(ret);
   }
@@ -122,9 +122,9 @@ namespace Needle {
       setVec(x, singleton<Var>(Deltavar), sol.middleRows(offset, 1));
       offset += 1;
     }
-    if (curvature_or_radius_vars.size()) {
-      setVec(x, curvature_or_radius_vars.flatten(), sol.middleRows(offset, curvature_or_radius_vars.size()));
-      offset += curvature_or_radius_vars.size();
+    if (curvature_vars.size()) {
+      setVec(x, curvature_vars.flatten(), sol.middleRows(offset, curvature_vars.size()));
+      offset += curvature_vars.size();
     }
   }
 }

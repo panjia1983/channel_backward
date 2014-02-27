@@ -81,8 +81,8 @@ namespace Needle {
     Matrix4d pose1 = cfg0->pose * expUp(a.topRows(6));
     Matrix4d pose2 = cfg1->pose * expUp(a.middleRows(6,6));
     double Delta = a(12);
-    double curvature_or_radius = a(13);
-    double theta = Delta * curvature_or_radius;
+    double curvature = a(13);
+    double theta = Delta * curvature;
     Vector6d v; v << 0, 0, Delta, theta, 0, 0;
     return logDown((pose1 * expUp(v)).inverse() * pose2);
   }
@@ -102,8 +102,8 @@ namespace Needle {
     Matrix4d pose1 = cfg0->pose * expUp(a.topRows(6));
     Matrix4d pose2 = cfg1->pose * expUp(a.middleRows(6,6));
     double phi = a(12), Delta = a(13);
-    double curvature_or_radius = a(14);
-    return logDown(helper->TransformPose(pose2, phi, Delta, curvature_or_radius).inverse() * pose1);
+    double curvature = a(14);
+    return logDown(helper->TransformPose(pose2, phi, Delta, curvature).inverse() * pose1);
 
   }
 
@@ -136,19 +136,8 @@ namespace Needle {
   VectorXd TotalCurvatureError::operator()(const VectorXd& a) const {
     DblVec curvatures;
     DblVec Deltas;
-    curvatures = toDblVec(a.head(pi->curvature_or_radius_vars.size()));
-
-    switch (helper->speed_formulation) {
-      case NeedleProblemHelper::ConstantSpeed: {
-        Deltas = DblVec(pi->curvature_or_radius_vars.size(), a(a.size() - 1));
-        break;
-      }
-      case NeedleProblemHelper::VariableSpeed: {
-        Deltas = toDblVec(a.tail(pi->Deltavars.size()));
-        break;
-      }
-      SWITCH_DEFAULT;
-    }
+    curvatures = toDblVec(a.head(pi->curvature_vars.size()));
+    Deltas = DblVec(pi->curvature_vars.size(), a(a.size() - 1));
     VectorXd ret(1);
     ret(0) = -this->total_curvature_limit;
     for (int i = 0; i < curvatures.size(); ++i) {

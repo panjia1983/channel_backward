@@ -11,7 +11,7 @@ namespace Needle {
     Vector6d goal;
     VarArray twistvars;
     VarArray phivars;
-    VarArray curvature_or_radius_vars;
+    VarArray curvature_vars;
     VarArray Deltavars;
     Var Deltavar;
     vector<LocalConfigurationPtr> local_configs;
