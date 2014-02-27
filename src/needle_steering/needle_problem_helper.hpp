@@ -6,11 +6,7 @@
 
 namespace Needle {
   struct NeedleProblemHelper : public boost::enable_shared_from_this<NeedleProblemHelper> {
-    // Formulation flag
-    enum Formulation { Form1 = 1, Form2 = 2 };
-    enum CurvatureConstraint { ConstantRadius = 1, BoundedRadius = 2 };
     enum Method { Colocation = 1, Shooting = 2 };
-    enum CurvatureFormulation { UseRadius = 1, UseCurvature = 2 };
     enum SpeedFormulation { ConstantSpeed = 1, VariableSpeed = 2 };
     enum RotationCost { UseRotationQuadraticCost = 1, UseRotationL1Cost = 2 };
     // Config parameters
@@ -30,11 +26,8 @@ namespace Needle {
     bool record_trust_region_history;
     vector<int> Ts;
     int n_dof;
-    int formulation;
-    int curvature_constraint;
     int speed_formulation;
     int method;
-    int curvature_formulation;
     int rotation_cost;
     bool use_speed_deviation_constraint;
     bool use_speed_deviation_cost;
