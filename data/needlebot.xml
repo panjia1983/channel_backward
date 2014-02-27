@@ -1,0 +1,25 @@
+<Robot name="needlebot">
+<KinBody>
+  <Body name="needlelink" type="dynamic">
+    <Translation>0 0 0</Translation>
+    <!--rotation of the body specified as a rotation axis. First three numbers are the axis.-->
+    <Mass type="mimicgeom">
+      <density>1</density>
+    </Mass>
+ 
+    <Geom type="cylinder">
+      <radius>.025</radius>
+      <height>.5</height>
+      <rotationaxis>1 0 0 90</rotationaxis>
+    </Geom>
+    <!--<Geom type="sphere">
+      <radius>.5</radius>
+    </Geom>-->
+
+    <Geom type="sphere">
+      <translation>0 0 0.25</translation>
+      <radius>.025</radius>
+    </Geom>
+ </Body>
+</KinBody>
+</Robot>

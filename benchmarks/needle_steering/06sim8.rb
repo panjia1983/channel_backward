@@ -1,0 +1,117 @@
+require 'parallel'
+require_relative 'model'
+
+cnt = 0
+
+#points = []
+#
+#each_converged = []
+#
+#[1, 2].each do |method|
+#  [[1, 0]].each do |separate_planning_first, simultaneous_planning|
+#    [1, 10].each do |collision_clearance_coeff|
+#      converged_points = Record.where(version: 10503,
+#                                      converged: true,
+#                                      simultaneous_planning: simultaneous_planning,
+#                                      method: method,
+#                                      collision_clearance_coeff: collision_clearance_coeff
+#                                      ).pluck(:goal_vec).uniq#.count
+#      each_converged << converged_points
+#    end
+#  end
+#end
+#
+#all_converged_pts = each_converged.inject(:&).map{|x|x.split(",")[0..2].map(&:to_f)}
+#
+#def dis(p1, p2)
+#  p1.zip(p2).map{|x,y| (x-y) ** 2}.inject(:+) ** 0.5
+#end
+#
+#def min_dis(pts)
+#  pts.combination(2).map{|pta, ptb| dis(pta, ptb)}.min
+#end
+
+File.open('points_multiple_needle_planning.txt').read.split("\n").map{|x| x.split(",").map(&:to_f)}.each_slice(5) do |pts|
+#puts pts
+#exit(1)
+#File.open('new_points_10000.txt').read.split("\n").map(&:split).each do |goal_trans_x, goal_trans_y, goal_trans_z|
+#  cnt += 1
+#  if cnt > 300
+#    break
+#  end
+#  points << [goal_trans_x.to_f, goal_trans_y.to_f, goal_trans_z.to_f]
+#end
+
+#200.times do
+#
+#  pts = nil
+#  while pts.nil? or min_dis(pts) < 0.7
+#    pts = all_converged_pts.sample(5)
+#  end
+
+#pts = [
+#[-2, 7.25, -0.3],
+#[-2.7, 7.7, -0.8],
+#[-2.3, 6.9, -1.2],
+#[-2.25, 6.8, 0.2],
+#[-2.2, 7.45, 0.7],
+#
+#]
+
+  seed = rand(100000000)
+  %w[needle_steering_10506].each do |pg_name|
+    [2].each do |method|
+      [[1, 0]].each do |separate_planning_first, simultaneous_planning|
+        exp_options = {
+          goal_orientation_constraint: 0,
+          r_min: 4,
+          curvature_constraint: 1,
+          channel_planning: 0,
+          method: method,
+          separate_planning_first: separate_planning_first,
+          simultaneous_planning: simultaneous_planning,
+          T: 10,
+          max_sequential_solves: 10,
+          first_run_only: 1,
+          data_dir: "../../data",
+          #collision_dist_pen: 0.25,
+          #goal_vec: "#{goal_trans_x},#{goal_trans_y},#{goal_trans_z},0,1.57,0",
+          #start_vec: "-11.17067,5.04934,0,0,1.57,0",
+          #start_position_error_relax_x: 0.05,#start_position_error_relax_x,
+          #start_position_error_relax_y: 1.25,
+          #start_position_error_relax_z: 1.25,
+          #start_orientation_error_relax: 0.08,
+          goal_distance_error_relax: 0.04,
+          #seed: seed,
+        }
+
+        command = "../../build/bin/#{pg_name}"
+        exp_options.each do |k, v|
+          command += " --#{k}=#{v}"
+        end
+
+        5.times do
+          command += " --start_vec=-7.5,5.75,0,0,1.57,0"
+          command += " --start_position_error_relax_x=0.05"
+          command += " --start_position_error_relax_y=2.5"
+          command += " --start_position_error_relax_z=1.25"
+          command += " --start_orientation_error_relax=0.24"
+          command += " --goal_distance_error_relax=0"
+        end
+
+        pts.each do |pt|
+          x,y,z = pt
+          command += " --goal_vec=#{x},#{y},#{z},0,1.57,0"
+        end
+
+        ENV["TRAJOPT_LOG_THRESH"] = "FATAL"
+
+        result = `#{command}`
+
+        Record.create! exp_options.merge command: command, result: result, pg_name: pg_name, problem: :needle_steering, version: 10608, description: "5 needles test"
+      end
+    end
+  end
+  end
+
+#end
