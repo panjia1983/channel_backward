@@ -102,6 +102,8 @@ int main(int argc, char** argv) {
     helper->n_needles = planner->n_needles;
     helper->starts = planner->starts;
     helper->goals = planner->goals;
+    helper->init_trajs = planner->init_trajs;
+    helper->init_controls = planner->init_controls;
     helper->start_position_error_relax = planner->start_position_error_relax;
     helper->start_orientation_error_relax = planner->start_orientation_error_relax;
     helper->goal_distance_error_relax = planner->goal_distance_error_relax;

@@ -11,6 +11,9 @@ namespace Needle {
     // Config parameters
     vector<Vector6d> starts;
     vector<Vector6d> goals;
+    vector<vector<Vector6d> > init_trajs;
+    vector<vector<VectorXd> > init_controls;
+    bool use_init_traj;
     int n_needles;
     double coeff_rotation;
     double coeff_rotation_regularization;
@@ -27,13 +30,9 @@ namespace Needle {
     int n_dof;
     int method;
     int rotation_cost;
-    bool use_speed_deviation_constraint;
-    bool use_speed_deviation_cost;
     bool use_collision_clearance_cost;
     bool verbose;
-    bool explicit_controls;
     bool continuous_collision;
-    bool control_constraints;
     bool goal_orientation_constraint;
     bool channel_planning;
     double env_transparency;
@@ -45,6 +44,7 @@ namespace Needle {
     double collision_clearance_threshold;
 
     double total_curvature_limit;
+    double total_rotation_limit;
 
     double channel_radius;
     double channel_height;
@@ -85,11 +85,15 @@ namespace Needle {
     void AddTotalCurvatureConstraint(OptProb& prob, NeedleProblemInstancePtr helper);
     void AddTotalCurvatureCost(OptProb& prob, NeedleProblemInstancePtr helper);
     void AddControlConstraint(OptProb& prob, NeedleProblemInstancePtr pi);
-    void AddPoseConstraint(OptProb& prob, NeedleProblemInstancePtr pi);
+    void AddTotalRotationConstraint(OptProb& prob, NeedleProblemInstancePtr pi);
     void AddCollisionConstraint(OptProb& prob, NeedleProblemInstancePtr pi);
     void AddSelfCollisionConstraint(OptProb& prob, NeedleProblemInstancePtr piA, NeedleProblemInstancePtr piB);
     void AddCollisionClearanceCost(OptProb& prob);
     void InitializeCollisionEnvironment();
+
+
+    void AddPoseConstraint(OptProb& prob, NeedleProblemInstancePtr pi);
+
 
     Matrix4d TransformPose(const Matrix4d& pose, double phi, double Delta, double radius) const;
     double GetPhi(const DblVec& x, int i, NeedleProblemInstancePtr pi) const;

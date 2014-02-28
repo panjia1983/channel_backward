@@ -22,7 +22,7 @@ namespace Needle {
     EnvironmentBasePtr env = helper->pis[0]->local_configs[0]->GetEnv();
     
     //CollisionChecker::GetOrCreate(*env)->PlotCollisionGeometry(handles);//SetContactDistance(collision_dist_pen + 0.05);
-    viewer->SetAllTransparency(0.1);
+    viewer->SetAllTransparency(planner->env_transparency);
     for (int k = 0; k < helper->pis.size(); ++k) {
       vector<KinBodyPtr> bodies = helper->pis[k]->local_configs[0]->GetBodies();
       MatrixXd vals = getTraj(x, helper->pis[k]->twistvars);
@@ -40,7 +40,7 @@ namespace Needle {
       for (int j = 0; j < extra_states[i].size(); ++j) {
         robot->SetTransform(matrixToTransform(expUp(extra_states[i][j])));
         handles.push_back(viewer->PlotKinBody(robot));
-        SetTransparency(handles.back(), 0.35);
+        SetTransparency(handles.back(), 1);
       }
     }
     planner->env->Remove(robot);

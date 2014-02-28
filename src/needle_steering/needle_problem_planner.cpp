@@ -51,6 +51,8 @@ namespace Needle {
     vector<double> start_position_error_relax_z;
 
     int T = 25;
+    n_channels = 1;
+    use_init_traj = false;
     
     Config config;
     config.add(new Parameter<bool>("stage_plotting", &this->stage_plotting, "stage_plotting"));
@@ -65,6 +67,8 @@ namespace Needle {
     config.add(new Parameter<string>("data_dir", &this->data_dir, "data_dir"));
     config.add(new Parameter<string>("env_file_path", &this->env_file_path, "env_file_path"));
     config.add(new Parameter<string>("robot_file_path", &this->robot_file_path, "robot_file_path"));
+    config.add(new Parameter<string>("init_traj_path", &this->init_traj_path, "init_traj_path"));
+    config.add(new Parameter<bool>("use_init_traj", &this->use_init_traj, "use_init_traj"));
     config.add(new Parameter< vector<string> >("start_vec", &start_string_vec, "s"));
     config.add(new Parameter< vector<string> >("goal_vec", &goal_string_vec, "g"));
     config.add(new Parameter< vector<double> >("start_position_error_relax_x", &start_position_error_relax_x, "start_position_error_relax_x"));
@@ -73,6 +77,7 @@ namespace Needle {
     config.add(new Parameter< vector<double> >("start_orientation_error_relax", &this->start_orientation_error_relax, "start_orientation_error_relax"));
     config.add(new Parameter< vector<double> >("goal_distance_error_relax", &this->goal_distance_error_relax, "goal_distance_error_relax"));
     config.add(new Parameter<bool>("channel_planning", &this->channel_planning, "channel_planning"));
+    config.add(new Parameter<int>("n_channels", &this->n_channels, "n_channels"));
     config.add(new Parameter<bool>("perturb_initialization", &this->perturb_initialization, "perturb_initialization"));
     config.add(new Parameter<int>("T", &T, "T"));
     config.add(new Parameter<int>("max_sequential_solves", &max_sequential_solves, "max_sequential_solves"));
@@ -170,27 +175,83 @@ namespace Needle {
     }
 
 
-    this->n_needles = start_string_vec.size();
-    this->starts.clear();
-    this->goals.clear();
-
-    this->sim_in_collision = vector<bool>(this->n_needles, false);
-    this->distance_to_goal = vector<double>(this->n_needles, 0);
+    if (channel_planning)
+    {
+      Vector3d t;
+      t << 0, 0, 0;
+      saveMultiChannelBot(t, 1, 0.1, 0.5, this->n_channels, this->data_dir + "/test.xml");
+      this->robot_file_path = this->data_dir + "/test.xml";
+    }
 
     KinBodyPtr robot = this->env->ReadRobotURI(RobotBasePtr(), this->robot_file_path);
-    this->env->Add(robot, true);
 
-    for (int i = 0; i < n_needles; ++i) {
-      DblVec start_vec;
-      DblVec goal_vec;
+    if (this->init_traj_path == "")
+    {
+      this->n_needles = start_string_vec.size();
+      this->starts.clear();
+      this->goals.clear();
+      this->init_trajs.clear();
+      this->init_controls.clear();
 
-      strtk::parse(start_string_vec[i], ",", start_vec);
-      strtk::parse(goal_string_vec[i], ",", goal_vec);
-      
-      starts.push_back(logDown(se4Up(toVectorXd(start_vec))));
-      goals.push_back(logDown(se4Up(toVectorXd(goal_vec))));
+      this->sim_in_collision = vector<bool>(this->n_needles, false);
+      this->distance_to_goal = vector<double>(this->n_needles, 0);
+
+      for (int i = 0; i < n_needles; ++i) {
+        DblVec start_vec;
+        DblVec goal_vec;
+
+        strtk::parse(start_string_vec[i], ",", start_vec);
+        strtk::parse(goal_string_vec[i], ",", goal_vec);
+
+        starts.push_back(logDown(se4Up(toVectorXd(start_vec))));
+        goals.push_back(logDown(se4Up(toVectorXd(goal_vec))));
+      }
+
+      init_trajs.resize(n_needles);
+      init_controls.resize(n_needles);
     }
-    this->env->Remove(robot);
+    else
+    {
+      vector<Matrix4d> poses;
+      vector<VectorXd> controls;
+      readInitTraj(this->init_traj_path, poses, controls);
+
+      for (size_t i = 0; i < poses.size(); ++i)
+      {
+        cout << poses[i] << endl;
+        cout << endl;
+      }
+
+      for (size_t i = 0; i < controls.size(); ++i)
+      {
+        cout << controls[i].transpose() << endl;
+        cout << endl;
+      }
+
+      // if has initial traj, then just use that T
+      T = poses.size() - 1;
+      this->starts.clear();
+      this->goals.clear();
+
+      this->init_trajs.clear();
+      vector<Vector6d> traj;
+      for (size_t i = 0; i < poses.size(); ++i)
+        traj.push_back(logDown(poses[i]));
+      this->init_trajs.push_back(traj);
+      this->init_controls.push_back(controls);
+
+      this->starts.push_back(this->init_trajs[0][0]);
+      this->goals.push_back(this->init_trajs[0].back());
+
+      cout << this->starts[0].transpose() << endl;
+      cout << this->goals[0].transpose() << endl;
+
+      this->n_needles = 1;
+      this->sim_in_collision = vector<bool>(this->n_needles, false);
+      this->distance_to_goal = vector<double>(this->n_needles, 0);
+    }
+
+
 
     for (int i = 0; i < n_needles; ++i) {
       this->Ts.push_back(T);
@@ -208,9 +269,6 @@ namespace Needle {
                                                             start_position_error_relax_z[i]));
       }
     }
-
-    this->starts_data = starts;
-    this->goals_data = goals;
 
     trajopt::SetUserData(*env, "trajopt_cc_hash", CollisionHashPtr(new NeedleCollisionHash(helper)));
   }
@@ -250,6 +308,10 @@ namespace Needle {
 
           helper->starts.push_back(this->starts[i]);
           helper->goals.push_back(this->goals[i]);
+          helper->init_trajs.push_back(this->init_trajs[i]);
+          helper->init_controls.push_back(this->init_controls[i]);
+          helper->use_init_traj = this->use_init_traj;
+
           helper->start_position_error_relax.push_back(this->start_position_error_relax[i]);
           helper->start_orientation_error_relax.push_back(this->start_orientation_error_relax[i]);
           helper->goal_distance_error_relax.push_back(this->goal_distance_error_relax[i]);
@@ -303,10 +365,10 @@ namespace Needle {
           
           OptStatus status = opt.optimize();
           if (status != OPT_CONVERGED) {
-            //cout << "Needle " << i << " not converged" << endl;
+            cout << "Needle " << i << " not converged" << endl;
             all_converged = false;
           } else {
-            //cout << "Needle " << i << " converged" << endl;
+            cout << "Needle " << i << " converged" << endl;
           }
 
           prev_converged[i] = status == OPT_CONVERGED;

@@ -13,4 +13,4 @@ include_directories(
 )
 
 add_executable(needle_steering needle_steering.cpp constraints.cpp costs.cpp local_configuration.cpp needle_problem_helper.cpp traj_plotter.cpp utils.cpp ../trajopt/bullet_unity.cpp needle_problem_instance.cpp needle_problem_planner.cpp needle_collision_hash.cpp)
-target_link_libraries(needle_steering trajopt utils)
+target_link_libraries(needle_steering trajopt utils tinyxml)

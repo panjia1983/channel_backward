@@ -84,6 +84,14 @@ namespace Needle {
     VectorXd operator()(const VectorXd& a) const;
   };
 
+  struct TotalRotationError : public VectorOfVector {
+    NeedleProblemHelperPtr helper;
+    NeedleProblemInstancePtr pi;
+    double total_rotation_limit;
+    TotalRotationError(double total_rotation_limit, NeedleProblemHelperPtr helper, NeedleProblemInstancePtr pi);
+    VectorXd operator()(const VectorXd& a) const;
+  };
+
   struct TotalCurvatureCostError : public VectorOfVector {
     boost::shared_ptr<TotalCurvatureError> err;
     TotalCurvatureCostError(double total_curvature_limit, NeedleProblemHelperPtr helper, NeedleProblemInstancePtr pi);

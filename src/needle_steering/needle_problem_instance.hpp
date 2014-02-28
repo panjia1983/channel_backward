@@ -9,6 +9,8 @@ namespace Needle {
     double Delta_lb;
     Vector6d start;
     Vector6d goal;
+    vector<Vector6d> init_traj;
+    vector<VectorXd> init_control;
     VarArray twistvars;
     VarArray phivars;
     VarArray curvature_vars;

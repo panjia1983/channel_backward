@@ -146,6 +146,20 @@ namespace Needle {
     return ret;
   }
 
+
+  TotalRotationError::TotalRotationError(double total_rotation_limit, NeedleProblemHelperPtr helper, NeedleProblemInstancePtr pi) : total_rotation_limit(total_rotation_limit), helper(helper), pi(pi) {}
+
+  VectorXd TotalRotationError::operator()(const VectorXd& a) const {
+    DblVec phis = toDblVec(a);
+    VectorXd ret(1);
+    ret(0) = -this->total_rotation_limit;
+    for (int i = 0; i < phis.size(); ++i) {
+      ret(0) += phis[i];
+    }
+    return ret;
+  }
+
+
   TotalCurvatureCostError::TotalCurvatureCostError(double total_curvature_limit, NeedleProblemHelperPtr helper, NeedleProblemInstancePtr pi) : err(new TotalCurvatureError(total_curvature_limit, helper, pi)) {}
 
   VectorXd TotalCurvatureCostError::operator()(const VectorXd& a) const {

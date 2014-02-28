@@ -9,6 +9,7 @@ namespace Needle {
     int argc;
     char **argv;
     int n_needles;
+    int n_channels;
 
     int max_sequential_solves;
     vector<int> Ts;
@@ -28,17 +29,21 @@ namespace Needle {
     double env_transparency;
     double deviation;
     double noise_scale;
+    bool use_init_traj;
     string data_dir;
     string env_file_path;
     string robot_file_path;
+    string init_traj_path;
 
     EnvironmentBasePtr env;
     boost::shared_ptr<TrajPlotter> plotter;
 
     vector<Vector6d> starts;
     vector<Vector6d> goals;
-    vector<Vector6d> starts_data;
-    vector<Vector6d> goals_data;
+
+    vector<vector<Vector6d> > init_trajs;
+    vector<vector<VectorXd> > init_controls;
+
     DblVec x;
     vector<Vector3d> start_position_error_relax;
     vector<double> start_orientation_error_relax;
