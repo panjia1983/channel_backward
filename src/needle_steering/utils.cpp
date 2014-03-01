@@ -101,6 +101,7 @@ namespace Needle {
   }
 
   Matrix3d expRot(const Vector3d& x) {
+    /*
     double rr = x.squaredNorm();
     if (fabs(rr) < 1e-10) {
       return Matrix3d::Identity();
@@ -108,6 +109,42 @@ namespace Needle {
       double r = sqrt(rr);
       return rotMat(x * (sin(r) / r)) + Matrix3d::Identity() * cos(r) + (x*x.transpose()) * ((1 - cos(r)) / rr);
     }
+    */
+    double angle;
+    double rr = x.squaredNorm();
+    Vector3d axis(1., 0., 0.);
+    if (fabs(rr) < 1e-10) {
+      angle = 0;
+    }
+    else
+    {
+      angle = sqrt(rr);
+      axis = x / angle;
+    }
+
+
+    double cs = cos(angle);
+    double sn = sin(angle);
+    double oneMinusCos = ((double)1) - cs;
+    double x2 = axis[0]*axis[0];
+    double y2 = axis[1]*axis[1];
+    double z2 = axis[2]*axis[2];
+    double xym = axis[0]*axis[1]*oneMinusCos;
+    double xzm = axis[0]*axis[2]*oneMinusCos;
+    double yzm = axis[1]*axis[2]*oneMinusCos;
+    double xSin = axis[0]*sn;
+    double ySin = axis[1]*sn;
+    double zSin = axis[2]*sn;
+
+    Matrix3d res;
+    res << x2*oneMinusCos + cs, xym - zSin, xzm + ySin,
+    xym + zSin,
+    y2*oneMinusCos + cs,
+    yzm - xSin,
+    xzm - ySin,
+    yzm + xSin,
+    z2*oneMinusCos + cs;
+    return res;
   }
 
   double ACos (double value)

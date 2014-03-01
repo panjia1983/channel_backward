@@ -114,7 +114,7 @@ namespace Needle {
 
       for (int i = 0; i < goal_string_vec.size(); ++i) {
         this->start_position_error_relax.push_back(Vector3d(2.5, 2.5, 0.1));
-        this->start_orientation_error_relax.push_back(0.1); // 0.01, 0.1744
+        this->start_orientation_error_relax.push_back(0.5); // 0.01, 0.1744
         this->goal_distance_error_relax.push_back(0);
       }
 

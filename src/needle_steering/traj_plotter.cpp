@@ -8,17 +8,7 @@ namespace Needle {
   bool TrajPlotter::OptimizerCallback(OptProb* prob, DblVec& x, NeedleProblemHelperPtr helper, NeedleProblemPlannerPtr planner, bool halt = true, const vector< vector<Vector6d> >& extra_states = vector< vector<Vector6d> >()) {
     vector<GraphHandlePtr> handles;
     OSGViewerPtr viewer = OSGViewer::GetOrCreate(helper->pis[0]->local_configs[0]->GetEnv());
-    //BOOST_FOREACH(CostPtr& cost, prob->getCosts()) {
-    //  if (Plotter* plotter = dynamic_cast<Plotter*>(cost.get())) {
-    //    plotter->Plot(x, *(helper->local_configs[0]->GetEnv()), handles);
-    //  }
-    //}
-    //vector<ConstraintPtr> constraints = prob->getConstraints();
-    //BOOST_FOREACH(ConstraintPtr& cnt, constraints) {
-    //  if (Plotter* plotter = dynamic_cast<Plotter*>(cnt.get())) {
-    //    plotter->Plot(x, *(helper->local_configs[0]->GetEnv()), handles);
-    //  }
-    //}
+
     EnvironmentBasePtr env = helper->pis[0]->local_configs[0]->GetEnv();
     
     //CollisionChecker::GetOrCreate(*env)->PlotCollisionGeometry(handles);//SetContactDistance(collision_dist_pen + 0.05);
@@ -34,15 +24,7 @@ namespace Needle {
         }
       }
     }
-    KinBodyPtr robot = env->ReadRobotURI(RobotBasePtr(), planner->robot_file_path);
-    planner->env->Add(robot, true);
-    for (int i = 0; i < extra_states.size(); ++i) {
-      for (int j = 0; j < extra_states[i].size(); ++j) {
-        robot->SetTransform(matrixToTransform(expUp(extra_states[i][j])));
-        handles.push_back(viewer->PlotKinBody(robot));
-        SetTransparency(handles.back(), 1);
-      }
-    }
+
 
     MatrixXf box_points(24,3);
     box_points << 2.5, 2.5, 0, 2.5, -2.5, 0, \
@@ -59,8 +41,6 @@ namespace Needle {
     -2.5, 2.5, 0, -2.5, 2.5, 10;
     handles.push_back(env->drawlinelist(box_points.data(), box_points.rows(), box_points.cols() * sizeof(float), 2, RaveVectorf(1,0,0,1)));
 
-
-    planner->env->Remove(robot);
     if (halt) viewer->Idle();
     return false;
   }

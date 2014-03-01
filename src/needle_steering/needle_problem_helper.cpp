@@ -98,19 +98,10 @@ namespace Needle {
 
   void NeedleProblemHelper::AddTotalRotationConstraint(OptProb& prob, NeedleProblemInstancePtr pi)
   {
-    /*
     VectorOfVectorPtr f(new Needle::TotalCurvatureError(this->total_rotation_limit, shared_from_this(), pi));
     VectorXd coeffs(1); coeffs << 1.;
     VarVector vars = pi->phivars.flatten();
     prob.addConstraint(ConstraintPtr(new ConstraintFromFunc(f, vars, coeffs, INEQ, (boost::format("total_rotation_constraint_collision_%i")%pi->id).str())));
-    */
-
-    VarVector vars = pi->phivars.flatten();
-    AffExpr total_rotation;
-    for (int i = 0; i < vars.size(); ++i)
-      exprInc(total_rotation, vars[i]);
-    exprSub(total_rotation, -this->total_rotation_limit);
-    prob.addLinearConstraint(total_rotation, EQ);
   }
 
   void NeedleProblemHelper::AddTotalCurvatureCost(OptProb& prob, NeedleProblemInstancePtr pi) {
@@ -202,6 +193,14 @@ namespace Needle {
           for (int j = 0; j < pis[i]->local_configs.size(); ++j) {
             pis[i]->local_configs[j]->pose = pis[i]->local_configs[j]->pose * expUp(twistvals.row(j));
           }
+
+          for (int j = 0; j < pis[i]->T; ++j)
+          {
+            double phi = GetPhi(x, j, pis[i]);
+            double Delta = GetDelta(x, j, pis[i]);
+            double curvature = GetCurvature(x, j, pis[i]);
+            cout << Delta << " " << phi << " " << curvature << endl;
+          }
           setVec(x, pis[i]->twistvars.m_data, DblVec(pis[i]->twistvars.size(), 0));
         }
         return false;
@@ -211,19 +210,17 @@ namespace Needle {
         for (int i = 0; i < n_needles; ++i) {
           MatrixXd twistvals = getTraj(x, pis[i]->twistvars);
 
-          //pis[i]->local_configs[pis[i]->T]->pose = expUp(pis[i]->goal);//*= expUp(twistvals.row(pis[i]->T));
-          cout << pis[i]->local_configs[0]->pose << endl;
-          pis[i]->local_configs[0]->pose = expUp(pis[i]->goal);//*= expUp(twistvals.row(pis[i]->T));
+          pis[i]->local_configs[0]->pose = expUp(pis[i]->goal);
           cout << pis[i]->goal << endl;
           cout << pis[i]->local_configs[0]->pose << endl;
 
-          //for (int j = pis[i]->T-1; j >=0; --j) {
           for (int j = 1; j <= pis[i]->T; ++j) {
             double phi = GetPhi(x, j-1, pis[i]);
             double Delta = GetDelta(x, j-1, pis[i]);
             double curvature = GetCurvature(x, j-1, pis[i]);
             cout << Delta << " " << phi << " " << curvature << endl;
             pis[i]->local_configs[j]->pose = TransformPose(pis[i]->local_configs[j-1]->pose, phi, Delta, curvature);
+
           }
           setVec(x, pis[i]->twistvars.m_data, DblVec(pis[i]->twistvars.size(), 0));
         }
@@ -430,19 +427,19 @@ namespace Needle {
     this->r_min = 5;
     this->n_dof = 6;
 
-    this->method = NeedleProblemHelper::Shooting;
+    this->method = NeedleProblemHelper::Colocation;
     this->rotation_cost = NeedleProblemHelper::UseRotationQuadraticCost;
     this->continuous_collision = true;
     this->goal_orientation_constraint = false;
     this->use_collision_clearance_cost = true;
 
     // parameters for the optimizer
-    this->improve_ratio_threshold = 0.2;
+    this->improve_ratio_threshold = 0.1;
     this->trust_shrink_ratio = 0.9;
-    this->trust_expand_ratio = 1.2;
+    this->trust_expand_ratio = 1.3;
     this->trust_box_size = .1;
     this->record_trust_region_history = false;
-    this->merit_error_coeff = 5;
+    this->merit_error_coeff = 10;
     this->max_merit_coeff_increases = 5;
 
     this->coeff_rotation = 1.;

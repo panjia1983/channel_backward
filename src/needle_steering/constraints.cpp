@@ -148,7 +148,7 @@ namespace Needle {
     VectorXd ret(1);
     ret(0) = -this->total_rotation_limit;
     for (int i = 0; i < phis.size(); ++i) {
-      ret(0) += phis[i];
+      ret(0) += fabs(phis[i]);
     }
     return ret;
   }
