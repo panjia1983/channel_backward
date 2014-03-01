@@ -7,8 +7,8 @@
 namespace Needle {
   struct NeedleProblemInstance {
     double Delta_lb;
-    Vector6d start;
-    Vector6d goal;
+    Vector6d entry;
+    Vector6d final;
     vector<Vector6d> init_traj;
     vector<VectorXd> init_control;
     VarArray twistvars;
@@ -22,9 +22,9 @@ namespace Needle {
     DblVec initVec;
     int T;
     int id;
-    Vector3d start_position_error_relax;
-    double start_orientation_error_relax;
-    double goal_distance_error_relax;
+    Vector3d entry_position_error_relax;
+    double entry_orientation_error_relax;
+    double final_distance_error_relax;
 
     VectorXd GetSolution(OptimizerT& opt);
     vector<Vector6d> GetStates(OptimizerT& opt);

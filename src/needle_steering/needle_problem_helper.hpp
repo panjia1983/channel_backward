@@ -9,8 +9,8 @@ namespace Needle {
     enum Method { Colocation = 1, Shooting = 2 };
     enum RotationCost { UseRotationQuadraticCost = 1, UseRotationL1Cost = 2 };
     // Config parameters
-    vector<Vector6d> starts;
-    vector<Vector6d> goals;
+    vector<Vector6d> entries;
+    vector<Vector6d> finals;
     vector<vector<Vector6d> > init_trajs;
     vector<vector<VectorXd> > init_controls;
     bool use_init_traj;
@@ -33,7 +33,7 @@ namespace Needle {
     bool use_collision_clearance_cost;
     bool verbose;
     bool continuous_collision;
-    bool goal_orientation_constraint;
+    bool final_orientation_constraint;
     bool channel_planning;
     double env_transparency;
     double r_min;
@@ -58,9 +58,9 @@ namespace Needle {
     vector<CostPtr> speed_costs;
     vector<CostPtr> clearance_costs;
 
-    vector<Vector3d> start_position_error_relax;
-    vector<double> start_orientation_error_relax;
-    vector<double> goal_distance_error_relax;
+    vector<Vector3d> entry_position_error_relax;
+    vector<double> entry_orientation_error_relax;
+    vector<double> final_distance_error_relax;
 
     void ConfigureProblem(OptProb& prob);
     void InitOptimizeVariables(OptimizerT& opt);
@@ -79,8 +79,8 @@ namespace Needle {
     void InitTrajectory(OptProb& prob, NeedleProblemInstancePtr pi);
     void AddRotationCost(OptProb& prob, NeedleProblemInstancePtr pi);
     void AddSpeedCost(OptProb& prob, NeedleProblemInstancePtr pi);
-    void AddStartConstraint(OptProb& prob, NeedleProblemInstancePtr pi);
-    void AddGoalConstraint(OptProb& prob, NeedleProblemInstancePtr pi);
+    void AddentryConstraint(OptProb& prob, NeedleProblemInstancePtr pi);
+    void AddfinalConstraint(OptProb& prob, NeedleProblemInstancePtr pi);
     void AddChannelConstraint(OptProb& prob, NeedleProblemInstancePtr pi);
     void AddTotalCurvatureConstraint(OptProb& prob, NeedleProblemInstancePtr helper);
     void AddTotalCurvatureCost(OptProb& prob, NeedleProblemInstancePtr helper);

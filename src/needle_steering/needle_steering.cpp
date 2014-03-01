@@ -52,7 +52,7 @@ int main(int argc, char** argv) {
 
   vector<VectorXd> sols;
   vector< vector<Vector6d> > states;
-  states.push_back(planner->starts);
+  states.push_back(planner->entries);
   bool sim_plotting = false;
   bool first_run_only = false;
   bool open_loop = false;
@@ -100,13 +100,13 @@ int main(int argc, char** argv) {
     NeedleProblemHelperPtr helper = planner->helper;
     helper->InitParametersFromConsole(argc, argv); 
     helper->n_needles = planner->n_needles;
-    helper->starts = planner->starts;
-    helper->goals = planner->goals;
+    helper->entries = planner->entries;
+    helper->finals = planner->finals;
     helper->init_trajs = planner->init_trajs;
     helper->init_controls = planner->init_controls;
-    helper->start_position_error_relax = planner->start_position_error_relax;
-    helper->start_orientation_error_relax = planner->start_orientation_error_relax;
-    helper->goal_distance_error_relax = planner->goal_distance_error_relax;
+    helper->entry_position_error_relax = planner->entry_position_error_relax;
+    helper->entry_orientation_error_relax = planner->entry_orientation_error_relax;
+    helper->final_distance_error_relax = planner->final_distance_error_relax;
     helper->Ts = planner->Ts;
     for (int i = 0; i < planner->n_needles; ++i) {
       helper->robots.push_back(planner->env->ReadRobotURI(RobotBasePtr(), planner->robot_file_path));
@@ -146,7 +146,7 @@ int main(int argc, char** argv) {
 
     cout << "collision status: " << vector_to_array_str(planner->sim_in_collision) << endl;
     
-    cout << "distance to goals: " << vector_to_array_str(planner->distance_to_goal) << endl;
+    cout << "distance to finals: " << vector_to_array_str(planner->distance_to_final) << endl;
 
     cout << "simulated trajectories: " << vector_vector_to_array_str(planner->simulated_needle_trajectories) << endl;
   }

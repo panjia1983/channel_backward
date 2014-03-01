@@ -33,24 +33,24 @@ namespace Needle {
   void NeedleProblemHelper::ConfigureProblem(OptProb& prob) {
     for (int i = 0; i < n_needles; ++i) {
       NeedleProblemInstancePtr pi(new NeedleProblemInstance());
-      pi->start = starts[i];
-      pi->goal = goals[i];
+      pi->entry = entries[i];
+      pi->final = finals[i];
       pi->init_traj = init_trajs[i];
       pi->init_control = init_controls[i];
       pi->T = Ts[i];
       pi->id = i;
       pi->helper = shared_from_this();
-      pi->start_position_error_relax = this->start_position_error_relax[i];
-      pi->start_orientation_error_relax = this->start_orientation_error_relax[i];
-      pi->goal_distance_error_relax = this->goal_distance_error_relax[i];
+      pi->entry_position_error_relax = this->entry_position_error_relax[i];
+      pi->entry_orientation_error_relax = this->entry_orientation_error_relax[i];
+      pi->final_distance_error_relax = this->final_distance_error_relax[i];
       CreateVariables(prob, pi);
       InitLocalConfigurations(this->robots[i], prob, pi);
       InitTrajectory(prob, pi);
       AddRotationCost(prob, pi);
       AddSpeedCost(prob, pi);
-      AddStartConstraint(prob, pi);
-      AddGoalConstraint(prob, pi);
-      //AddFixedGoalConstraint(prob, pi);
+      AddentryConstraint(prob, pi);
+      AddfinalConstraint(prob, pi);
+      //AddFixedfinalConstraint(prob, pi);
       if (this->channel_planning) {
         AddChannelConstraint(prob, pi);
         AddTotalCurvatureConstraint(prob, pi);
@@ -210,8 +210,8 @@ namespace Needle {
         for (int i = 0; i < n_needles; ++i) {
           MatrixXd twistvals = getTraj(x, pis[i]->twistvars);
 
-          pis[i]->local_configs[0]->pose = expUp(pis[i]->goal);
-          cout << pis[i]->goal << endl;
+          pis[i]->local_configs[0]->pose = expUp(pis[i]->final);
+          cout << pis[i]->final << endl;
           cout << pis[i]->local_configs[0]->pose << endl;
 
           for (int j = 1; j <= pis[i]->T; ++j) {
@@ -248,7 +248,7 @@ namespace Needle {
   void NeedleProblemHelper::CreateVariables(OptProb& prob, NeedleProblemInstancePtr pi) {
     AddVarArray(prob, pi->T+1, n_dof, "twist", pi->twistvars);
     AddVarArray(prob, pi->T, 1, -PI, PI, "phi", pi->phivars);
-    pi->Delta_lb = (expUp(pi->goal).topRightCorner<3, 1>() - expUp(pi->start).topRightCorner<3, 1>()).norm() / pi->T;
+    pi->Delta_lb = (expUp(pi->final).topRightCorner<3, 1>() - expUp(pi->entry).topRightCorner<3, 1>()).norm() / pi->T;
     pi->Deltavar = prob.createVariables(singleton<string>("Delta"), singleton<double>(pi->Delta_lb),singleton<double>(INFINITY))[0];
     AddVarArray(prob, pi->T, 1, 1. / (r_min*30), 1. / r_min, "curvature", pi->curvature_vars);
   }
@@ -270,7 +270,7 @@ namespace Needle {
     else
     {
       for (int idof = 0; idof < n_dof; ++idof) {
-        initTraj.col(idof) = VectorXd::LinSpaced(pi->T+1, pi->goal[idof], pi->start[idof]);
+        initTraj.col(idof) = VectorXd::LinSpaced(pi->T+1, pi->final[idof], pi->entry[idof]);
       }
     }
 
@@ -279,10 +279,10 @@ namespace Needle {
     }
   }
 
-  void NeedleProblemHelper::AddStartConstraint(OptProb& prob, NeedleProblemInstancePtr pi) {
+  void NeedleProblemHelper::AddentryConstraint(OptProb& prob, NeedleProblemInstancePtr pi) {
     VarVector vars = pi->twistvars.row(pi->T);
 
-    if (pi->start_position_error_relax.norm() > 1e-4 || pi->start_orientation_error_relax > 1e-4)
+    if (pi->entry_position_error_relax.norm() > 1e-4 || pi->entry_orientation_error_relax > 1e-4)
     {
       VectorOfVectorPtr f_orientation;
       VectorOfVectorPtr f_translation;
@@ -292,17 +292,17 @@ namespace Needle {
       if (this->channel_planning)
       {
 
-        Vector6d start_cons; start_cons << 0, 0, 0, 0, -3.14, 0;
-        start_cons = logDown(se4Up(start_cons));
-        f_orientation.reset(new Needle::CircleOrientationError(pi->local_configs[pi->T], start_cons, pi->start_orientation_error_relax, shared_from_this()));
-        f_translation.reset(new Needle::TranslationError(pi->local_configs[pi->T], start_cons, pi->start_position_error_relax, shared_from_this()));
+        Vector6d entry_cons; entry_cons << 0, 0, 0, 0, -3.14, 0;
+        entry_cons = logDown(se4Up(entry_cons));
+        f_orientation.reset(new Needle::CircleOrientationError(pi->local_configs[pi->T], entry_cons, pi->entry_orientation_error_relax, shared_from_this()));
+        f_translation.reset(new Needle::TranslationError(pi->local_configs[pi->T], entry_cons, pi->entry_position_error_relax, shared_from_this()));
         coeffs_orientation = VectorXd(1);
         coeffs_translation = VectorXd(3);
       }
       else
       {
-        f_orientation.reset(new Needle::CircleOrientationError(pi->local_configs[pi->T], pi->start, pi->start_orientation_error_relax, shared_from_this()));
-        f_translation.reset(new Needle::TranslationError(pi->local_configs[pi->T], pi->start, pi->start_position_error_relax, shared_from_this()));
+        f_orientation.reset(new Needle::CircleOrientationError(pi->local_configs[pi->T], pi->entry, pi->entry_orientation_error_relax, shared_from_this()));
+        f_translation.reset(new Needle::TranslationError(pi->local_configs[pi->T], pi->entry, pi->entry_position_error_relax, shared_from_this()));
         coeffs_orientation = VectorXd(1);
         coeffs_translation = VectorXd(3);
       }
@@ -318,7 +318,7 @@ namespace Needle {
     }
     else
     {
-      VectorOfVectorPtr f(new Needle::ExactPositionError(pi->local_configs[pi->T], pi->start, shared_from_this()));
+      VectorOfVectorPtr f(new Needle::ExactPositionError(pi->local_configs[pi->T], pi->entry, shared_from_this()));
       Vector6d coeffs; coeffs << 1., 1., 1., 1., 1., 1.;
       prob.addConstraint(ConstraintPtr(new ConstraintFromFunc(f, vars, coeffs, EQ, "entry")));
       pi->dynamics_constraints.push_back(prob.getConstraints().back());
@@ -326,7 +326,7 @@ namespace Needle {
 
   }
 
-  void NeedleProblemHelper::AddGoalConstraint(OptProb& prob, NeedleProblemInstancePtr pi)
+  void NeedleProblemHelper::AddfinalConstraint(OptProb& prob, NeedleProblemInstancePtr pi)
   {
     VarVector vars = pi->twistvars.row(0);
     for (int i = 0; i < vars.size(); ++i)
@@ -430,7 +430,7 @@ namespace Needle {
     this->method = NeedleProblemHelper::Colocation;
     this->rotation_cost = NeedleProblemHelper::UseRotationQuadraticCost;
     this->continuous_collision = true;
-    this->goal_orientation_constraint = false;
+    this->final_orientation_constraint = false;
     this->use_collision_clearance_cost = true;
 
     // parameters for the optimizer
@@ -487,7 +487,7 @@ namespace Needle {
     config.add(new Parameter<bool>("use_collision_clearance_cost", &this->use_collision_clearance_cost, "use_collision_clearance_cost"));
     config.add(new Parameter<bool>("record_trust_region_history", &this->record_trust_region_history, "record_trust_region_history"));
     config.add(new Parameter<bool>("continuous_collision", &this->continuous_collision, "continuous_collision"));
-    config.add(new Parameter<bool>("goal_orientation_constraint", &this->goal_orientation_constraint, "goal_orientation_constraint"));
+    config.add(new Parameter<bool>("final_orientation_constraint", &this->final_orientation_constraint, "final_orientation_constraint"));
     config.add(new Parameter<bool>("channel_planning", &this->channel_planning, "channel_planning"));
 
     CommandParser parser(config);
@@ -496,8 +496,8 @@ namespace Needle {
   }
 
   void NeedleProblemHelper::Clear() {
-    starts.clear();
-    goals.clear();
+    entries.clear();
+    finals.clear();
     if (robots.size() > 0) {
       EnvironmentBasePtr env = pis[0]->local_configs[0]->GetEnv();
       for (int i = 0; i < n_needles; ++i) {
@@ -507,9 +507,9 @@ namespace Needle {
     }
     robots.clear();
     self_collision_constraints.clear();
-    start_position_error_relax.clear();
-    start_orientation_error_relax.clear();
-    goal_distance_error_relax.clear();
+    entry_position_error_relax.clear();
+    entry_orientation_error_relax.clear();
+    final_distance_error_relax.clear();
     pis.clear();
     Ts.clear();
     n_needles = 0;
@@ -577,7 +577,7 @@ namespace Needle {
   void NeedleProblemHelper::IntegrateControls(DblVec& x) {
     for (int i = 0; i < n_needles; ++i) {
       if (i == 0) {
-        pis[i]->local_configs[0]->pose = expUp(pis[i]->goal);
+        pis[i]->local_configs[0]->pose = expUp(pis[i]->final);
       }
       for (int j = 1; j <= pis[i]->T; ++j) {
         double phi = GetPhi(x, j-1, pis[i]);

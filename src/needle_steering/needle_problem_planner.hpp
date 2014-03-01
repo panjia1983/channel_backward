@@ -38,17 +38,17 @@ namespace Needle {
     EnvironmentBasePtr env;
     boost::shared_ptr<TrajPlotter> plotter;
 
-    vector<Vector6d> starts;
-    vector<Vector6d> goals;
+    vector<Vector6d> entries;
+    vector<Vector6d> finals;
 
     vector<vector<Vector6d> > init_trajs;
     vector<vector<VectorXd> > init_controls;
 
     DblVec x;
-    vector<Vector3d> start_position_error_relax;
-    vector<double> start_orientation_error_relax;
-    vector<double> goal_distance_error_relax;
-    vector<double> distance_to_goal;
+    vector<Vector3d> entry_position_error_relax;
+    vector<double> entry_orientation_error_relax;
+    vector<double> final_distance_error_relax;
+    vector<double> distance_to_final;
     vector<KinBodyPtr> managed_kinbodies;
     vector<LocalConfigurationPtr> managed_configs;
 

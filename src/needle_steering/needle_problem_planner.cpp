@@ -43,12 +43,12 @@ namespace Needle {
     noise_scale(1.),
     data_dir(get_current_directory() + "/../data") {
 
-    vector<string> start_string_vec;
-    vector<string> goal_string_vec;
+    vector<string> entry_string_vec;
+    vector<string> final_string_vec;
 
-    vector<double> start_position_error_relax_x;
-    vector<double> start_position_error_relax_y;
-    vector<double> start_position_error_relax_z;
+    vector<double> entry_position_error_relax_x;
+    vector<double> entry_position_error_relax_y;
+    vector<double> entry_position_error_relax_z;
 
     int T = 25;
     n_channels = 1;
@@ -69,13 +69,13 @@ namespace Needle {
     config.add(new Parameter<string>("robot_file_path", &this->robot_file_path, "robot_file_path"));
     config.add(new Parameter<string>("init_traj_path", &this->init_traj_path, "init_traj_path"));
     config.add(new Parameter<bool>("use_init_traj", &this->use_init_traj, "use_init_traj"));
-    config.add(new Parameter< vector<string> >("start_vec", &start_string_vec, "s"));
-    config.add(new Parameter< vector<string> >("goal_vec", &goal_string_vec, "g"));
-    config.add(new Parameter< vector<double> >("start_position_error_relax_x", &start_position_error_relax_x, "start_position_error_relax_x"));
-    config.add(new Parameter< vector<double> >("start_position_error_relax_y", &start_position_error_relax_y, "start_position_error_relax_y"));
-    config.add(new Parameter< vector<double> >("start_position_error_relax_z", &start_position_error_relax_z, "start_position_error_relax_z"));
-    config.add(new Parameter< vector<double> >("start_orientation_error_relax", &this->start_orientation_error_relax, "start_orientation_error_relax"));
-    config.add(new Parameter< vector<double> >("goal_distance_error_relax", &this->goal_distance_error_relax, "goal_distance_error_relax"));
+    config.add(new Parameter< vector<string> >("entry_vec", &entry_string_vec, "s"));
+    config.add(new Parameter< vector<string> >("final_vec", &final_string_vec, "g"));
+    config.add(new Parameter< vector<double> >("entry_position_error_relax_x", &entry_position_error_relax_x, "entry_position_error_relax_x"));
+    config.add(new Parameter< vector<double> >("entry_position_error_relax_y", &entry_position_error_relax_y, "entry_position_error_relax_y"));
+    config.add(new Parameter< vector<double> >("entry_position_error_relax_z", &entry_position_error_relax_z, "entry_position_error_relax_z"));
+    config.add(new Parameter< vector<double> >("entry_orientation_error_relax", &this->entry_orientation_error_relax, "entry_orientation_error_relax"));
+    config.add(new Parameter< vector<double> >("final_distance_error_relax", &this->final_distance_error_relax, "final_distance_error_relax"));
     config.add(new Parameter<bool>("channel_planning", &this->channel_planning, "channel_planning"));
     config.add(new Parameter<int>("n_channels", &this->n_channels, "n_channels"));
     config.add(new Parameter<bool>("perturb_initialization", &this->perturb_initialization, "perturb_initialization"));
@@ -85,37 +85,37 @@ namespace Needle {
     parser.read(argc, argv, true);
 
     if (channel_planning) {
-      if (start_string_vec.size() == 0) {
+      if (entry_string_vec.size() == 0) {
 
-        start_string_vec.push_back("-1.25,0.0,0,0,0,0");
-        goal_string_vec.push_back("-1.25,0.0,7,-1.1780972450961724,-0.0,-0.0");
-        start_string_vec.push_back("1.25,0.0,0,0,0,0");
-        goal_string_vec.push_back("1.25,0.0,7,1.1780972450961724,0.0,0.0");
-        start_string_vec.push_back("0.0,-1.25,0,0,0,0");
-        goal_string_vec.push_back("0.0,-1.25,7,-0.0,-1.1780972450961724,-0.0");
-        start_string_vec.push_back("0.0,1.25,0,0,0,0");
-        goal_string_vec.push_back("0.0,1.25,7,0.0,1.1780972450961724,0.0");
-        start_string_vec.push_back("-1.5556349186104046,-1.5556349186104048,0,0,0,0");
-        goal_string_vec.push_back("-1.5556349186104046,-1.5556349186104048,3.5,0.0,0.0,0.0");
-        start_string_vec.push_back("-2.12503681783595,-0.5694018992255463,0,0,0,0");
-        goal_string_vec.push_back("-2.12503681783595,-0.5694018992255463,3.5,0.0,0.0,0.0");
-        start_string_vec.push_back("-2.1250368178359507,0.5694018992255448,0,0,0,0");
-        goal_string_vec.push_back("-2.1250368178359507,0.5694018992255448,3.5,0.0,0.0,0.0");
-        start_string_vec.push_back("-1.555634918610405,1.5556349186104046,0,0,0,0");
-        goal_string_vec.push_back("-1.555634918610405,1.5556349186104046,3.5,0.0,0.0,0.0");
-        start_string_vec.push_back("1.4142135623730951,1.414213562373095,0,0,0,0");
-        goal_string_vec.push_back("1.4142135623730951,1.414213562373095,3.5,0.0,0.39269908169872414,0.0");
-        start_string_vec.push_back("2.0,0.0,0,0,0,0");
-        goal_string_vec.push_back("2.0,0.0,3.5,0.0,0.39269908169872414,0.0");
-        start_string_vec.push_back("1.4142135623730951,-1.414213562373095,0,0,0,0");
-        goal_string_vec.push_back("1.4142135623730951,-1.414213562373095,3.5,0.0,0.39269908169872414,0.0");
+        entry_string_vec.push_back("-1.25,0.0,0,0,0,0");
+        final_string_vec.push_back("-1.25,0.0,7,-1.1780972450961724,-0.0,-0.0");
+        entry_string_vec.push_back("1.25,0.0,0,0,0,0");
+        final_string_vec.push_back("1.25,0.0,7,1.1780972450961724,0.0,0.0");
+        entry_string_vec.push_back("0.0,-1.25,0,0,0,0");
+        final_string_vec.push_back("0.0,-1.25,7,-0.0,-1.1780972450961724,-0.0");
+        entry_string_vec.push_back("0.0,1.25,0,0,0,0");
+        final_string_vec.push_back("0.0,1.25,7,0.0,1.1780972450961724,0.0");
+        entry_string_vec.push_back("-1.5556349186104046,-1.5556349186104048,0,0,0,0");
+        final_string_vec.push_back("-1.5556349186104046,-1.5556349186104048,3.5,0.0,0.0,0.0");
+        entry_string_vec.push_back("-2.12503681783595,-0.5694018992255463,0,0,0,0");
+        final_string_vec.push_back("-2.12503681783595,-0.5694018992255463,3.5,0.0,0.0,0.0");
+        entry_string_vec.push_back("-2.1250368178359507,0.5694018992255448,0,0,0,0");
+        final_string_vec.push_back("-2.1250368178359507,0.5694018992255448,3.5,0.0,0.0,0.0");
+        entry_string_vec.push_back("-1.555634918610405,1.5556349186104046,0,0,0,0");
+        final_string_vec.push_back("-1.555634918610405,1.5556349186104046,3.5,0.0,0.0,0.0");
+        entry_string_vec.push_back("1.4142135623730951,1.414213562373095,0,0,0,0");
+        final_string_vec.push_back("1.4142135623730951,1.414213562373095,3.5,0.0,0.39269908169872414,0.0");
+        entry_string_vec.push_back("2.0,0.0,0,0,0,0");
+        final_string_vec.push_back("2.0,0.0,3.5,0.0,0.39269908169872414,0.0");
+        entry_string_vec.push_back("1.4142135623730951,-1.414213562373095,0,0,0,0");
+        final_string_vec.push_back("1.4142135623730951,-1.414213562373095,3.5,0.0,0.39269908169872414,0.0");
       }
 
 
-      for (int i = 0; i < goal_string_vec.size(); ++i) {
-        this->start_position_error_relax.push_back(Vector3d(2.5, 2.5, 0.1));
-        this->start_orientation_error_relax.push_back(0.5); // 0.01, 0.1744
-        this->goal_distance_error_relax.push_back(0);
+      for (int i = 0; i < final_string_vec.size(); ++i) {
+        this->entry_position_error_relax.push_back(Vector3d(2.5, 2.5, 0.1));
+        this->entry_orientation_error_relax.push_back(0.5); // 0.01, 0.1744
+        this->final_distance_error_relax.push_back(0);
       }
 
 
@@ -126,22 +126,22 @@ namespace Needle {
         this->robot_file_path = data_dir + "/channelbot.xml";
       }
     } else {
-      if (start_string_vec.size() == 0) {
-        start_string_vec.push_back("-7.5,5.75,0,0,1.57,0");
-        goal_string_vec.push_back("-3.2396,6.46645,0.301649,0,1.57,0");
-        start_string_vec.push_back("-7.5,4.75,0,0,1.57,0");
-        goal_string_vec.push_back("-2.71912,8.00334,-1.12736,0,1.57,0");
-        start_string_vec.push_back("-7.5,5.25,0,0,1.57,0");
-        goal_string_vec.push_back("-1.99682,7.43527,-1.85617,0,1.57,0");
-        start_string_vec.push_back("-7.5,5.35,0,0,1.57,0");
-        goal_string_vec.push_back("-2.0386,7.0732,0.493712,0,1.57,0");
-        start_string_vec.push_back("-7.5,5.45,0,0,1.57,0");
-        goal_string_vec.push_back("-2.74817,5.83943,0.104912,0,1.57,0");
+      if (entry_string_vec.size() == 0) {
+        entry_string_vec.push_back("-7.5,5.75,0,0,1.57,0");
+        final_string_vec.push_back("-3.2396,6.46645,0.301649,0,1.57,0");
+        entry_string_vec.push_back("-7.5,4.75,0,0,1.57,0");
+        final_string_vec.push_back("-2.71912,8.00334,-1.12736,0,1.57,0");
+        entry_string_vec.push_back("-7.5,5.25,0,0,1.57,0");
+        final_string_vec.push_back("-1.99682,7.43527,-1.85617,0,1.57,0");
+        entry_string_vec.push_back("-7.5,5.35,0,0,1.57,0");
+        final_string_vec.push_back("-2.0386,7.0732,0.493712,0,1.57,0");
+        entry_string_vec.push_back("-7.5,5.45,0,0,1.57,0");
+        final_string_vec.push_back("-2.74817,5.83943,0.104912,0,1.57,0");
 
-        for (int i = 0; i < goal_string_vec.size(); ++i) {
-          this->start_position_error_relax.push_back(Vector3d(0.05, 2.5, 1.25));
-          this->start_orientation_error_relax.push_back(0.08);
-          this->goal_distance_error_relax.push_back(0.125);
+        for (int i = 0; i < final_string_vec.size(); ++i) {
+          this->entry_position_error_relax.push_back(Vector3d(0.05, 2.5, 1.25));
+          this->entry_orientation_error_relax.push_back(0.08);
+          this->final_distance_error_relax.push_back(0.125);
         }
       }
       if (this->env_file_path.length() == 0) {
@@ -152,12 +152,12 @@ namespace Needle {
       }
     }
 
-    if (start_string_vec.size() != goal_string_vec.size()) {
-      throw std::runtime_error("The number of start and goal vectors must be the same!");
+    if (entry_string_vec.size() != final_string_vec.size()) {
+      throw std::runtime_error("The number of entry and final vectors must be the same!");
     }
 
-    if (start_string_vec.size() == 0) {
-      throw std::runtime_error("You must provide at least 1 start and 1 goal vector.");
+    if (entry_string_vec.size() == 0) {
+      throw std::runtime_error("You must provide at least 1 entry and 1 final vector.");
     }
 
     RaveInitialize(false, verbose ? Level_Debug : Level_Fatal);
@@ -189,24 +189,24 @@ namespace Needle {
 
     if (this->init_traj_path == "")
     {
-      this->n_needles = start_string_vec.size();
-      this->starts.clear();
-      this->goals.clear();
+      this->n_needles = entry_string_vec.size();
+      this->entries.clear();
+      this->finals.clear();
       this->init_trajs.clear();
       this->init_controls.clear();
 
       this->sim_in_collision = vector<bool>(this->n_needles, false);
-      this->distance_to_goal = vector<double>(this->n_needles, 0);
+      this->distance_to_final = vector<double>(this->n_needles, 0);
 
       for (int i = 0; i < n_needles; ++i) {
-        DblVec start_vec;
-        DblVec goal_vec;
+        DblVec entry_vec;
+        DblVec final_vec;
 
-        strtk::parse(start_string_vec[i], ",", start_vec);
-        strtk::parse(goal_string_vec[i], ",", goal_vec);
+        strtk::parse(entry_string_vec[i], ",", entry_vec);
+        strtk::parse(final_string_vec[i], ",", final_vec);
 
-        starts.push_back(logDown(se4Up(toVectorXd(start_vec))));
-        goals.push_back(logDown(se4Up(toVectorXd(goal_vec))));
+        entries.push_back(logDown(se4Up(toVectorXd(entry_vec))));
+        finals.push_back(logDown(se4Up(toVectorXd(final_vec))));
       }
 
       init_trajs.resize(n_needles);
@@ -232,8 +232,8 @@ namespace Needle {
 
       // if has initial traj, then just use that T
       T = poses.size() - 1;
-      this->starts.clear();
-      this->goals.clear();
+      this->entries.clear();
+      this->finals.clear();
 
       this->init_trajs.clear();
       vector<Vector6d> traj;
@@ -242,15 +242,15 @@ namespace Needle {
       this->init_trajs.push_back(traj);
       this->init_controls.push_back(controls);
 
-      this->starts.push_back(this->init_trajs[0].back());
-      this->goals.push_back(this->init_trajs[0][0]);
+      this->entries.push_back(this->init_trajs[0].back());
+      this->finals.push_back(this->init_trajs[0][0]);
 
-      cout << this->starts[0].transpose() << endl;
-      cout << this->goals[0].transpose() << endl;
+      cout << this->entries[0].transpose() << endl;
+      cout << this->finals[0].transpose() << endl;
 
       this->n_needles = 1;
       this->sim_in_collision = vector<bool>(this->n_needles, false);
-      this->distance_to_goal = vector<double>(this->n_needles, 0);
+      this->distance_to_final = vector<double>(this->n_needles, 0);
     }
 
 
@@ -259,16 +259,16 @@ namespace Needle {
       this->Ts.push_back(T);
     }
 
-    if (!(start_position_error_relax_x.size() == start_position_error_relax_y.size() && start_position_error_relax_y.size() == start_position_error_relax_z.size())) {
-      throw std::runtime_error("start position error relaxes must have the same size.");
+    if (!(entry_position_error_relax_x.size() == entry_position_error_relax_y.size() && entry_position_error_relax_y.size() == entry_position_error_relax_z.size())) {
+      throw std::runtime_error("entry position error relaxes must have the same size.");
     }
 
-    if (start_position_error_relax_x.size() > 0) {
-      this->start_position_error_relax.clear();
-      for (int i = 0; i < start_position_error_relax_x.size(); ++i) {
-        this->start_position_error_relax.push_back(Vector3d(start_position_error_relax_x[i],
-                                                            start_position_error_relax_y[i],
-                                                            start_position_error_relax_z[i]));
+    if (entry_position_error_relax_x.size() > 0) {
+      this->entry_position_error_relax.clear();
+      for (int i = 0; i < entry_position_error_relax_x.size(); ++i) {
+        this->entry_position_error_relax.push_back(Vector3d(entry_position_error_relax_x[i],
+                                                            entry_position_error_relax_y[i],
+                                                            entry_position_error_relax_z[i]));
       }
     }
 
@@ -309,23 +309,23 @@ namespace Needle {
           }
           helper->n_needles = 1;
 
-          helper->starts.push_back(this->starts[i]);
-          helper->goals.push_back(this->goals[i]);
+          helper->entries.push_back(this->entries[i]);
+          helper->finals.push_back(this->finals[i]);
           helper->init_trajs.push_back(this->init_trajs[i]);
           helper->init_controls.push_back(this->init_controls[i]);
           helper->use_init_traj = this->use_init_traj;
 
-          helper->start_position_error_relax.push_back(this->start_position_error_relax[i]);
-          helper->start_orientation_error_relax.push_back(this->start_orientation_error_relax[i]);
-          helper->goal_distance_error_relax.push_back(this->goal_distance_error_relax[i]);
+          helper->entry_position_error_relax.push_back(this->entry_position_error_relax[i]);
+          helper->entry_orientation_error_relax.push_back(this->entry_orientation_error_relax[i]);
+          helper->final_distance_error_relax.push_back(this->final_distance_error_relax[i]);
           helper->Ts.push_back(this->Ts[i]);
           helper->robots.push_back(this->env->ReadRobotURI(RobotBasePtr(), this->robot_file_path));
           
           this->env->Add(helper->robots.back(), true);
           /*
-          if (!this->is_first_needle_run && i == 0) { // fix start position if not first run
-            helper->start_position_error_relax.front() = Vector3d::Zero();
-            helper->start_orientation_error_relax.front() = 0;
+          if (!this->is_first_needle_run && i == 0) { // fix entry position if not first run
+            helper->entry_position_error_relax.front() = Vector3d::Zero();
+            helper->entry_orientation_error_relax.front() = 0;
           }
           */
           for (int j = 0; j < states.size(); ++j) {
@@ -406,11 +406,11 @@ namespace Needle {
       helper->method = NeedleProblemHelper::Colocation;
     }
     helper->n_needles = this->n_needles;
-    helper->starts = this->starts;
-    helper->goals = this->goals;
-    helper->start_position_error_relax = this->start_position_error_relax;
-    helper->start_orientation_error_relax = this->start_orientation_error_relax;
-    helper->goal_distance_error_relax = this->goal_distance_error_relax;
+    helper->entries = this->entries;
+    helper->finals = this->finals;
+    helper->entry_position_error_relax = this->entry_position_error_relax;
+    helper->entry_orientation_error_relax = this->entry_orientation_error_relax;
+    helper->final_distance_error_relax = this->final_distance_error_relax;
     helper->Ts = this->Ts;
 
     if (helper->Ts.front() == 1) {
@@ -423,9 +423,9 @@ namespace Needle {
       helper->max_merit_coeff_increases -= 2;
     }
 
-    if (!this->is_first_needle_run) { // fix start position if not first run
-      helper->start_position_error_relax.front() = Vector3d::Zero();
-      helper->start_orientation_error_relax.front() = 0;
+    if (!this->is_first_needle_run) { // fix entry position if not first run
+      helper->entry_position_error_relax.front() = Vector3d::Zero();
+      helper->entry_orientation_error_relax.front() = 0;
     }
 
     for (int i = 0; i < n_needles; ++i) {
@@ -521,7 +521,7 @@ namespace Needle {
 
     simulated_needle_trajectories.back().push_back(new_state);
 
-    this->starts.front() = new_state;
+    this->entries.front() = new_state;
 
     vector<ConfigurationPtr> rads;
     //rads.push_back(ConfigurationPtr(new LocalConfiguration(helper->pis.front()->local_configs.front()->body, expUp(state_to_change))));
@@ -552,15 +552,15 @@ namespace Needle {
     }
     if (Ts.front() <= 1 || in_collision) {
       // get rid of first needle
-      this->distance_to_goal[current_sim_index] =
-        (expUp(this->goals[0]).topRightCorner<3, 1>() -
+      this->distance_to_final[current_sim_index] =
+        (expUp(this->finals[0]).topRightCorner<3, 1>() -
         expUp(new_state).topRightCorner<3, 1>()).norm();
       this->Ts.erase(this->Ts.begin());
-      this->starts.erase(this->starts.begin());
-      this->goals.erase(this->goals.begin());
-      this->start_position_error_relax.erase(this->start_position_error_relax.begin());
-      this->start_orientation_error_relax.erase(this->start_orientation_error_relax.begin());
-      this->goal_distance_error_relax.erase(this->goal_distance_error_relax.begin());
+      this->entries.erase(this->entries.begin());
+      this->finals.erase(this->finals.begin());
+      this->entry_position_error_relax.erase(this->entry_position_error_relax.begin());
+      this->entry_orientation_error_relax.erase(this->entry_orientation_error_relax.begin());
+      this->final_distance_error_relax.erase(this->final_distance_error_relax.begin());
       this->is_first_needle_run = true;
       // pull out the needle and cancel current operation if in collision
       if (!in_collision) {
