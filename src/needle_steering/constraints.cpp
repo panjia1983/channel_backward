@@ -2,6 +2,7 @@
 #include "utils.hpp"
 #include "local_configuration.hpp"
 #include "needle_problem_helper.hpp"
+#include <unsupported/Eigen/MatrixFunctions>
 
 namespace Needle {
 
@@ -94,9 +95,8 @@ namespace Needle {
   VectorXd ControlError::operator()(const VectorXd& a) const {
     Matrix4d pose1 = cfg0->pose * expUp(a.topRows(6));
     Matrix4d pose2 = cfg1->pose * expUp(a.middleRows(6,6));
-    double phi = a(12), Delta = a(13);
-    double curvature = a(14);
-    //return logDown(helper->TransformPose(pose2, phi, Delta, curvature).inverse() * pose1);
+
+    double phi = a(12), Delta = a(13), curvature = a(14);
     return logDown(helper->TransformPose(pose1, phi, Delta, curvature).inverse() * pose2);
 
   }
@@ -104,6 +104,43 @@ namespace Needle {
   int ControlError::outputSize() const {
     return 6;
   }
+
+
+  LinearizedControlError::LinearizedControlError(LocalConfigurationPtr cfg0, LocalConfigurationPtr cfg1, NeedleProblemHelperPtr helper) : cfg0(cfg0), cfg1(cfg1), body(cfg0->GetBodies()[0]), helper(helper) {}
+
+  VectorXd LinearizedControlError::operator()(const VectorXd& a) const {
+    Matrix4d pose1 = cfg0->pose * expUp(a.topRows(6));
+    Matrix4d pose2 = cfg1->pose * expUp(a.middleRows(6,6));
+
+    Vector6d x1 = a.topRows(6);
+    Vector6d x2 = a.middleRows(6,6);
+    double phi = a(12), Delta = a(13), curvature = a(14);
+    double phi_ref = cfg0->phi, Delta_ref = cfg0->Delta, curvature_ref = cfg0->curvature;
+
+    MatrixXd F = MatrixXd::Zero(6,6);
+    F.topLeftCorner(3, 3) = -rotMat(Vector3d(Delta_ref*curvature_ref, 0, phi_ref));
+    F.topRightCorner(3, 3) = -rotMat(Vector3d(0, 0, Delta_ref));
+    F.bottomRightCorner(3, 3) = -rotMat(Vector3d(Delta_ref*curvature_ref, 0, phi_ref));
+
+    MatrixXd G = MatrixXd::Zero(6,6);
+    G(2, 0) = 1;
+    G(3, 2) = 1;
+    G(5, 1) = 1;
+
+    MatrixXd A = F.exp();
+    MatrixXd halfF = 0.5*F;
+    MatrixXd B = (1/6.0) * (G + 4.0*(halfF.exp()*G) + A*G);
+
+    Vector3d u;
+    u << Delta - Delta_ref, phi - phi_ref, Delta*curvature - Delta_ref*curvature_ref;
+
+    return x2 - A * x1 - B * u;
+  }
+
+  int LinearizedControlError::outputSize() const {
+    return 6;
+  }
+
 
   ChannelSurfaceDistance::ChannelSurfaceDistance(LocalConfigurationPtr cfg, NeedleProblemHelperPtr helper) : cfg(cfg), helper(helper) {} 
 

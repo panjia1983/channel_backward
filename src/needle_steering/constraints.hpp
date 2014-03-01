@@ -68,6 +68,15 @@ namespace Needle {
     int outputSize() const;
   };
 
+  struct LinearizedControlError : public VectorOfVector {
+    LocalConfigurationPtr cfg0, cfg1;
+    KinBodyPtr body;
+    NeedleProblemHelperPtr helper;
+    LinearizedControlError(LocalConfigurationPtr cfg0, LocalConfigurationPtr cfg1, NeedleProblemHelperPtr helper);
+    VectorXd operator()(const VectorXd& a) const;
+    int outputSize() const;
+  };
+
   struct ChannelSurfaceDistance : public VectorOfVector {
     LocalConfigurationPtr cfg;
     NeedleProblemHelperPtr helper;

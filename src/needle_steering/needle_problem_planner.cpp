@@ -338,6 +338,7 @@ namespace Needle {
           OptimizerT opt(prob);
           helper->ConfigureOptimizer(opt);
 
+          // perturbation in sequential attempt
           if (sols[i].size() > 0) {
             vector<VectorXd> subinitial;
             subinitial.push_back(sols[i]);
@@ -391,14 +392,15 @@ namespace Needle {
     current_converged = all_converged;
 
     if (this->channel_planning && !this->simultaneous_planning) {
-      //if (all_converged) {
-      //  cout << "channel planning converged" << endl;
-      //} else {
-      //  cout << "channel planning did not converge" << endl;
-      //}
       return sols;
     }
-    /*
+
+
+
+
+
+
+
     trajopt::SetUserData(*env, "trajopt_cc", OpenRAVE::UserDataPtr());
     helper->InitParametersFromConsole(this->argc, this->argv);
     if (current_sim_index > 0 && this->use_colocation_correction) {
@@ -482,7 +484,7 @@ namespace Needle {
     this->x = opt.x();
 
     return sols;
-    */
+
   }
 
   Vector6d NeedleProblemPlanner::PerturbState(const Vector6d& state) {
@@ -502,11 +504,6 @@ namespace Needle {
     double phi = helper->GetPhi(this->x, current_open_sim_index, helper->pis.front());
     double Delta = helper->GetDelta(this->x, current_open_sim_index, helper->pis.front());
     double curvature = helper->GetCurvature(this->x, current_open_sim_index, helper->pis.front());
-
-
-    //cout << "phi: " << phi << endl;
-    //cout << "Delta: " << Delta << endl;
-    //cout << "curvature: " << curvature << endl;
 
     if (this->is_first_needle_run) {
       simulated_needle_trajectories.push_back(vector<Vector6d>());

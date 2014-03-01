@@ -85,6 +85,7 @@ namespace Needle {
     void AddTotalCurvatureConstraint(OptProb& prob, NeedleProblemInstancePtr helper);
     void AddTotalCurvatureCost(OptProb& prob, NeedleProblemInstancePtr helper);
     void AddControlConstraint(OptProb& prob, NeedleProblemInstancePtr pi);
+    void AddLinearizedControlConstraint(OptProb& prob, NeedleProblemInstancePtr pi);
     void AddTotalRotationConstraint(OptProb& prob, NeedleProblemInstancePtr pi);
     void AddCollisionConstraint(OptProb& prob, NeedleProblemInstancePtr pi);
     void AddSelfCollisionConstraint(OptProb& prob, NeedleProblemInstancePtr piA, NeedleProblemInstancePtr piB);

@@ -7,6 +7,8 @@ namespace Needle {
   struct LocalConfiguration : public Configuration {
     KinBodyPtr body;
     Matrix4d pose;
+    double phi, Delta, curvature;
+
     LocalConfiguration(KinBodyPtr body, const Matrix4d& pose);
     LocalConfiguration(KinBodyPtr body);
     virtual void SetDOFValues(const DblVec& dofs);

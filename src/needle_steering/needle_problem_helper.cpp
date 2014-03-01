@@ -59,6 +59,7 @@ namespace Needle {
 
       AddTotalRotationConstraint(prob, pi);
 
+      // AddLinearizedControlConstraint(prob, pi);
       AddControlConstraint(prob, pi);
 
       AddCollisionConstraint(prob, pi);
@@ -139,7 +140,16 @@ namespace Needle {
 
           // Initialize time frame curvature
           for (int i = 0; i < pi->T; ++i)
-            pi->initVec.push_back(pi->init_control[0](1));
+            pi->initVec.push_back(pi->init_control[i](1));
+
+
+          for (int i = 0; i < pi->T; ++i)
+          {
+            pi->local_configs[i]->phi = pi->init_control[i](2);
+            pi->local_configs[i]->Delta = pi->init_control[0](0);
+            pi->local_configs[i]->curvature = pi->init_control[i](1);
+
+          }
         }
         else
         {
@@ -199,6 +209,10 @@ namespace Needle {
             double phi = GetPhi(x, j, pis[i]);
             double Delta = GetDelta(x, j, pis[i]);
             double curvature = GetCurvature(x, j, pis[i]);
+            pis[i]->local_configs[j]->phi = phi;
+            pis[i]->local_configs[j]->Delta = Delta;
+            pis[i]->local_configs[j]->curvature = curvature;
+
             cout << Delta << " " << phi << " " << curvature << endl;
           }
           setVec(x, pis[i]->twistvars.m_data, DblVec(pis[i]->twistvars.size(), 0));
@@ -218,6 +232,10 @@ namespace Needle {
             double phi = GetPhi(x, j-1, pis[i]);
             double Delta = GetDelta(x, j-1, pis[i]);
             double curvature = GetCurvature(x, j-1, pis[i]);
+            pis[i]->local_configs[j-1]->phi = phi;
+            pis[i]->local_configs[j-1]->Delta = Delta;
+            pis[i]->local_configs[j-1]->curvature = curvature;
+
             cout << Delta << " " << phi << " " << curvature << endl;
             pis[i]->local_configs[j]->pose = TransformPose(pis[i]->local_configs[j-1]->pose, phi, Delta, curvature);
 
@@ -346,6 +364,20 @@ namespace Needle {
       VectorXd coeffs = VectorXd::Ones(boost::static_pointer_cast<Needle::ControlError>(f)->outputSize());
       coeffs.tail<3>() *= this->coeff_orientation_error;
       prob.addConstraint(ConstraintPtr(new ConstraintFromFunc(f, vars, coeffs, EQ, (boost::format("control%i")%i).str())));
+      pi->dynamics_constraints.push_back(prob.getConstraints().back());
+    }
+  }
+
+
+  void NeedleProblemHelper::AddLinearizedControlConstraint(OptProb& prob, NeedleProblemInstancePtr pi) {
+    for (int i = 0; i < pi->T; ++i) {
+      VarVector vars = concat(concat(pi->twistvars.row(i), pi->twistvars.row(i+1)), pi->phivars.row(i));
+      vars.push_back(pi->Deltavar);
+      vars = concat(vars, pi->curvature_vars.row(i));
+      VectorOfVectorPtr f(new Needle::LinearizedControlError(pi->local_configs[i], pi->local_configs[i+1], shared_from_this()));
+      VectorXd coeffs = VectorXd::Ones(boost::static_pointer_cast<Needle::ControlError>(f)->outputSize());
+      coeffs.tail<3>() *= this->coeff_orientation_error;
+      prob.addConstraint(ConstraintPtr(new ConstraintFromFunc(f, vars, coeffs, EQ, (boost::format("linearized_control%i")%i).str())));
       pi->dynamics_constraints.push_back(prob.getConstraints().back());
     }
   }
