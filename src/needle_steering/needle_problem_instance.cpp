@@ -16,9 +16,6 @@ namespace Needle {
     if (phivars.size()) {
       ret = concat(ret, getVec(x, phivars.flatten()));
     }
-    if (Deltavars.size()) {
-      ret = concat(ret, getVec(x, Deltavars.flatten()));
-    }
     if (Deltavar.var_rep) {
       ret = concat(ret, getVec(x, singleton<Var>(Deltavar)));
     }
@@ -52,10 +49,6 @@ namespace Needle {
       cout << "solution phis: " << sol.middleRows(offset, phivars.size()).transpose() << endl;
       offset += phivars.size();
     }
-    if (Deltavars.size()) {
-      cout << "solution Deltas: " << sol.middleRows(offset, Deltavars.size()).transpose() << endl;
-      offset += Deltavars.size();
-    }
     if (Deltavar.var_rep) {
       cout << "solution Delta: " << sol.middleRows(offset, 1).transpose() << endl;
       offset += 1;
@@ -84,10 +77,6 @@ namespace Needle {
       ret = concat(ret, toDblVec(sol.middleRows(offset + 1, phivars.size() - 1)));
       offset += phivars.size();
     }
-    if (Deltavars.size()) {
-      ret = concat(ret, toDblVec(sol.middleRows(offset + 1, Deltavars.size() - 1)));
-      offset += Deltavars.size();
-    }
     if (Deltavar.var_rep) {
       ret = concat(ret, toDblVec(sol.middleRows(offset, 1)));
       offset += 1;
@@ -113,10 +102,6 @@ namespace Needle {
     if (phivars.size()) {
       setVec(x, phivars.flatten(), sol.middleRows(offset, phivars.size()));
       offset += phivars.size();
-    }
-    if (Deltavars.size()) {
-      setVec(x, Deltavars.flatten(), sol.middleRows(offset, Deltavars.size()));
-      offset += Deltavars.size();
     }
     if (Deltavar.var_rep) {
       setVec(x, singleton<Var>(Deltavar), sol.middleRows(offset, 1));

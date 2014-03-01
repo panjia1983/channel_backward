@@ -4,25 +4,24 @@
 #include "fwd.hpp"
 
 namespace Needle {
-  struct SquarePositionError : public VectorOfVector {
+  struct TranslationError : public VectorOfVector {
     LocalConfigurationPtr cfg;
     KinBodyPtr body;
     Matrix4d target_pose;
     Vector3d position_error_relax;
-    double orientation_error_relax;
     NeedleProblemHelperPtr helper;
-    SquarePositionError(LocalConfigurationPtr cfg, const Vector6d& target_pos, const Vector3d& position_error_relax, double orientation_error_relax, NeedleProblemHelperPtr helper);
+    TranslationError(LocalConfigurationPtr cfg, const Vector6d& target_pos, const Vector3d& position_error_relax, NeedleProblemHelperPtr helper);
     VectorXd operator()(const VectorXd& a) const;
   };
 
-  struct CirclePositionError : public VectorOfVector {
+  struct CircleOrientationError : public VectorOfVector {
     LocalConfigurationPtr cfg;
     KinBodyPtr body;
     Matrix4d target_pose;
     Vector3d position_error_relax;
     double orientation_error_relax;
     NeedleProblemHelperPtr helper;
-    CirclePositionError(LocalConfigurationPtr cfg, const Vector6d& target_pos, const Vector3d& position_error_relax, double orientation_error_relax, NeedleProblemHelperPtr helper);
+    CircleOrientationError(LocalConfigurationPtr cfg, const Vector6d& target_pos, double orientation_error_relax, NeedleProblemHelperPtr helper);
     VectorXd operator()(const VectorXd& a) const;
   };
 

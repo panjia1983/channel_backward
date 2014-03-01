@@ -43,6 +43,23 @@ namespace Needle {
         SetTransparency(handles.back(), 1);
       }
     }
+
+    MatrixXf box_points(24,3);
+    box_points << 2.5, 2.5, 0, 2.5, -2.5, 0, \
+    2.5, -2.5, 0, -2.5, -2.5, 0, \
+    -2.5, -2.5, 0, -2.5, 2.5, 0, \
+    -2.5, 2.5, 0, 2.5, 2.5, 0, \
+    2.5, 2.5, 10, 2.5, -2.5, 10, \
+    2.5, -2.5, 10, -2.5, -2.5, 10, \
+    -2.5, -2.5, 10, -2.5, 2.5, 10, \
+    -2.5, 2.5, 10, 2.5, 2.5, 10, \
+    2.5, 2.5, 0, 2.5, 2.5, 10, \
+    2.5, -2.5, 0, 2.5, -2.5, 10, \
+    -2.5, -2.5, 0, -2.5, -2.5, 10, \
+    -2.5, 2.5, 0, -2.5, 2.5, 10;
+    handles.push_back(env->drawlinelist(box_points.data(), box_points.rows(), box_points.cols() * sizeof(float), 2, RaveVectorf(1,0,0,1)));
+
+
     planner->env->Remove(robot);
     if (halt) viewer->Idle();
     return false;

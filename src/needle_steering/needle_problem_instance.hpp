@@ -14,7 +14,6 @@ namespace Needle {
     VarArray twistvars;
     VarArray phivars;
     VarArray curvature_vars;
-    VarArray Deltavars;
     Var Deltavar;
     vector<LocalConfigurationPtr> local_configs;
     vector<ConstraintPtr> dynamics_constraints;

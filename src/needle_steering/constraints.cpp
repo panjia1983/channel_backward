@@ -5,9 +5,9 @@
 
 namespace Needle {
 
-  SquarePositionError::SquarePositionError(LocalConfigurationPtr cfg, const Vector6d& target_pos, const Vector3d& position_error_relax, double orientation_error_relax, NeedleProblemHelperPtr helper) : cfg(cfg), target_pose(expUp(target_pos)), position_error_relax(position_error_relax), orientation_error_relax(orientation_error_relax), body(cfg->GetBodies()[0]), helper(helper) {}
+  TranslationError::TranslationError(LocalConfigurationPtr cfg, const Vector6d& target_pos, const Vector3d& position_error_relax, NeedleProblemHelperPtr helper) : cfg(cfg), target_pose(expUp(target_pos)), position_error_relax(position_error_relax), body(cfg->GetBodies()[0]), helper(helper) {}
 
-  CirclePositionError::CirclePositionError(LocalConfigurationPtr cfg, const Vector6d& target_pos, const Vector3d& position_error_relax, double orientation_error_relax, NeedleProblemHelperPtr helper) : cfg(cfg), target_pose(expUp(target_pos)), position_error_relax(position_error_relax), orientation_error_relax(orientation_error_relax), body(cfg->GetBodies()[0]), helper(helper) {}
+  CircleOrientationError::CircleOrientationError(LocalConfigurationPtr cfg, const Vector6d& target_pos, double orientation_error_relax, NeedleProblemHelperPtr helper) : cfg(cfg), target_pose(expUp(target_pos)), orientation_error_relax(orientation_error_relax), body(cfg->GetBodies()[0]), helper(helper) {}
 
   ExactPositionError::ExactPositionError(LocalConfigurationPtr cfg, const Vector6d& target_pos, NeedleProblemHelperPtr helper) : cfg(cfg), target_pose(expUp(target_pos)), body(cfg->GetBodies()[0]), helper(helper) {}
 
@@ -21,40 +21,33 @@ namespace Needle {
     }
   }
 
-  VectorXd SquarePositionError::operator()(const VectorXd& a) const {
+
+  VectorXd TranslationError::operator()(const VectorXd& a) const {
     assert(a.size() == 6);
-    
+
     Matrix4d current_pose = cfg->pose * expUp(a);
-    Vector3d current_rot = current_pose.topLeftCorner<3, 3>() * Vector3d(0, 0, 1);
-    Vector3d target_rot = target_pose.topLeftCorner<3, 3>() * Vector3d(0, 0, 1);
 
-    double orientation_error = fmax(acos(cosangle(current_rot, target_rot)) - this->orientation_error_relax, 0);
-    Vector3d position_error = (current_pose.block<3, 1>(0, 3) - target_pose.block<3, 1>(0, 3)).array().abs();
-    position_error = (position_error - this->position_error_relax).cwiseMax(Vector3d::Zero());
+    Vector3d err = (current_pose.block<3, 1>(0, 3) - target_pose.block<3, 1>(0, 3)).array().abs();
+    err = (err - this->position_error_relax).cwiseMax(Vector3d::Zero());
 
-    Vector4d err;
-    err.head<3>() = position_error;
-    err(3) = orientation_error;
     return err;
   }
 
-  VectorXd CirclePositionError::operator()(const VectorXd& a) const {
+
+  VectorXd CircleOrientationError::operator()(const VectorXd& a) const {
     assert(a.size() == 6);
-    
+
     Matrix4d current_pose = cfg->pose * expUp(a);
 
     Vector3d current_rot = current_pose.topLeftCorner<3, 3>() * Vector3d(0, 0, 1);
     Vector3d target_rot = target_pose.topLeftCorner<3, 3>() * Vector3d(0, 0, 1);
 
-    double orientation_error = fmax(acos(cosangle(current_rot, target_rot)) - this->orientation_error_relax, 0);
-    double position_error = (current_pose.block<2, 1>(0, 3) - target_pose.block<2, 1>(0, 3)).norm();
-    position_error = fmax(position_error - this->position_error_relax(0) + 0.2, 0);
-    double height_error = fmax(fabs(current_pose(2, 3) - target_pose(2, 3)) - this->position_error_relax(2), 0);
+    double orientation_error = fmax(1 - cosangle(current_rot, target_rot) - this->orientation_error_relax, 0);
 
-
-    Vector3d err; err << position_error, height_error, orientation_error;
+    VectorXd err(1); err << orientation_error;
     return err;
   }
+
 
   VectorXd ExactPositionError::operator()(const VectorXd& a) const {
     assert(a.size() == 6);
@@ -103,7 +96,8 @@ namespace Needle {
     Matrix4d pose2 = cfg1->pose * expUp(a.middleRows(6,6));
     double phi = a(12), Delta = a(13);
     double curvature = a(14);
-    return logDown(helper->TransformPose(pose2, phi, Delta, curvature).inverse() * pose1);
+    //return logDown(helper->TransformPose(pose2, phi, Delta, curvature).inverse() * pose1);
+    return logDown(helper->TransformPose(pose1, phi, Delta, curvature).inverse() * pose2);
 
   }
 

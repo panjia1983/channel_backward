@@ -110,7 +110,121 @@ namespace Needle {
     }
   }
 
+  double ACos (double value)
+  {
+    if (-1.0 < value)
+    {
+      if (value < 1.0)
+      {
+        return acos(value);
+      }
+      else
+      {
+        return 0.0;
+      }
+    }
+    else
+    {
+      return M_PI;
+    }
+  }
+
+
+  double Sqrt (double value)
+  {
+    if (value >= 0.0)
+    {
+      return sqrt(value);
+    }
+    else
+    {
+      return 0.0;
+    }
+  }
+
   Vector3d logRot(const Matrix3d& X) {
+    double trace = X(0, 0) + X(1, 1) + X(2, 2);
+    double cs = 0.5 * (trace - 1);
+    double angle = ACos(cs);  // in [0,PI]
+
+    Vector3d axis;
+    if (angle > 0.0)
+    {
+      if (angle < M_PI)
+      {
+        axis << X(2, 1) - X(1, 2),
+            X(0, 2) - X(2, 0),
+            X(1, 0) - X(0, 1);
+
+        double len = axis.norm();
+
+        if (len > 1e-8)
+        {
+          axis /= len;
+        }
+        else
+        {
+          axis = Vector3d::Zero();
+        }
+
+      }
+      else
+      {
+        // angle is PI
+        double halfInverse;
+        if (X(0, 0) >= X(1,1))
+        {
+          // r00 >= r11
+          if (X(0,0) >= X(2,2))
+          {
+            // r00 is maximum diagonal term
+            axis(0) = 0.5*Sqrt(1 + X(0,0) - X(1,1) - X(2,2));
+            halfInverse = 0.5/axis(0);
+            axis(1) = halfInverse*X(0,1);
+            axis(2) = halfInverse*X(0,2);
+          }
+          else
+          {
+            // r22 is maximum diagonal term
+            axis(2) = 0.5*Sqrt(1 + X(2,2) - X(0,0) - X(1,1));
+            halfInverse = 0.5/axis(2);
+            axis(0) = halfInverse*X(0,2);
+            axis(1) = halfInverse*X(1,2);
+          }
+        }
+        else
+        {
+          // r11 > r00
+          if (X(1,1) >= X(2,2))
+          {
+            // r11 is maximum diagonal term
+            axis(1) = 0.5*Sqrt(1 + X(1,1) - X(0,0) - X(2,2));
+            halfInverse  = 0.5/axis(1);
+            axis(0) = halfInverse*X(0,1);
+            axis(2) = halfInverse*X(1,2);
+          }
+          else
+          {
+            // r22 is maximum diagonal term
+            axis(2) = 0.5*Sqrt(1 + X(2,2) - X(0,0) - X(1,1));
+            halfInverse = 0.5/axis(2);
+            axis(0) = halfInverse*X(0,2);
+            axis(1) = halfInverse*X(1,2);
+          }
+        }
+      }
+    }
+    else
+    {
+      // The angle is 0 and the matrix is the identity.  Any axis will
+      // work, so just use the x-axis.
+      axis << 1, 0, 0;
+    }
+
+    return axis * angle;
+  }
+
+  Vector3d logRot2(const Matrix3d& X) {
     // Using the old implementation since it seems more robust in practice
     Vector3d x;
     x << X(2, 1) - X(1, 2),
@@ -120,7 +234,9 @@ namespace Needle {
     double t = X(0, 0) + X(1, 1) + X(2, 2) - 1;
 
     if (fabs(r) < 1e-8) {
-      return Vector3d::Zero();
+      Vector3d res = Vector3d::Zero();
+      res(0) = -M_PI;
+      return res;
     } else {
       return x * (atan2(r, t) / r);
     }
@@ -379,11 +495,6 @@ namespace Needle {
         controls.push_back(control);
       }
     }
-
-    // flip
-    reverse(controls.begin(), controls.end());
-    reverse(poses.begin(), poses.end());
-
   }
 
 }
