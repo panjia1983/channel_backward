@@ -31,6 +31,13 @@ namespace Needle {
                            std::size_t n,
                            const string& filename);
 
+  void saveMultiChannelBot2(const Vector3d& translation,
+                            double density,
+                            double cylinder_radius,
+                            double cylinder_height,
+                            std::size_t n,
+                            const string& filename);
+
   void readInitTraj(const string& filename, vector<Matrix4d>& poses, vector<VectorXd>& controls);
 
 

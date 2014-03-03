@@ -68,6 +68,16 @@ namespace Needle {
     int outputSize() const;
   };
 
+
+  struct ControlErrorFirstFixed : public VectorOfVector {
+    LocalConfigurationPtr cfg0, cfg1;
+    KinBodyPtr body;
+    NeedleProblemHelperPtr helper;
+    ControlErrorFirstFixed(LocalConfigurationPtr cfg0, LocalConfigurationPtr cfg1, NeedleProblemHelperPtr helper);
+    VectorXd operator()(const VectorXd& a) const;
+    int outputSize() const;
+  };
+
   struct LinearizedControlError : public VectorOfVector {
     LocalConfigurationPtr cfg0, cfg1;
     KinBodyPtr body;
@@ -105,5 +115,16 @@ namespace Needle {
     TotalCurvatureCostError(double total_curvature_limit, NeedleProblemHelperPtr helper, NeedleProblemInstancePtr pi);
     VectorXd operator()(const VectorXd& a) const;
   };
+
+  struct TwistError : public VectorOfVector {
+    NeedleProblemHelperPtr helper;
+    NeedleProblemInstancePtr pi;
+    double twist_translation_limit;
+    double twist_rotation_limit;
+    TwistError(double twist_translation_limit, double twist_rotation_limit, NeedleProblemHelperPtr helper, NeedleProblemInstancePtr pi);
+    VectorXd operator()(const VectorXd& a) const;
+    int outputSize() const;
+  };
+
 
 }

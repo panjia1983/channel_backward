@@ -12,12 +12,12 @@ namespace Needle {
   void NeedleProblemHelper::AddRotationCost(OptProb& prob, NeedleProblemInstancePtr pi) {
     switch (rotation_cost) {
       case UseRotationQuadraticCost: {
-        prob.addCost(CostPtr(new RotationQuadraticCost(pi->phivars.col(0), coeff_rotation, shared_from_this())));
+        prob.addCost(CostPtr(new DiffGeometryQuadraticCost(pi->phivars.col(0), "Rotation", coeff_rotation, shared_from_this())));
         this->rotation_costs.push_back(prob.getCosts().back());
         break;
       }
       case UseRotationL1Cost: {
-        prob.addCost(CostPtr(new RotationL1Cost(pi->phivars.col(0), coeff_rotation_regularization, shared_from_this())));
+        prob.addCost(CostPtr(new DiffGeometryL1Cost(pi->phivars.col(0), "Rotation", coeff_rotation_regularization, shared_from_this())));
         this->rotation_costs.push_back(prob.getCosts().back());
         break;
       }
@@ -25,6 +25,21 @@ namespace Needle {
     }
   }
 
+  void NeedleProblemHelper::AddCurvatureCost(OptProb& prob, NeedleProblemInstancePtr pi) {
+    switch (rotation_cost) {
+      case UseRotationQuadraticCost: {
+        prob.addCost(CostPtr(new DiffGeometryQuadraticCost(pi->curvature_vars.col(0), "Curvature", coeff_curvature, shared_from_this())));
+        this->curvature_costs.push_back(prob.getCosts().back());
+        break;
+      }
+      case UseRotationL1Cost: {
+        prob.addCost(CostPtr(new DiffGeometryL1Cost(pi->curvature_vars.col(0), "Curvature", coeff_curvature_regularization, shared_from_this())));
+        this->curvature_costs.push_back(prob.getCosts().back());
+        break;
+      }
+      SWITCH_DEFAULT;
+    }
+  }
   void NeedleProblemHelper::AddSpeedCost(OptProb& prob, NeedleProblemInstancePtr pi) {
     prob.addCost(CostPtr(new ConstantSpeedCost(pi->Deltavar, coeff_speed, shared_from_this(), pi)));
     this->speed_costs.push_back(prob.getCosts().back());
@@ -47,19 +62,22 @@ namespace Needle {
       InitLocalConfigurations(this->robots[i], prob, pi);
       InitTrajectory(prob, pi);
       AddRotationCost(prob, pi);
+      AddCurvatureCost(prob, pi);
       AddSpeedCost(prob, pi);
-      AddentryConstraint(prob, pi);
-      AddfinalConstraint(prob, pi);
+      AddEntryConstraint(prob, pi);
+      AddFinalConstraint(prob, pi);
+
+      //AddTwistConstraint(prob, pi);
       //AddFixedfinalConstraint(prob, pi);
       if (this->channel_planning) {
-        AddChannelConstraint(prob, pi);
+        //AddChannelConstraint(prob, pi);
         AddTotalCurvatureConstraint(prob, pi);
         //AddTotalCurvatureCost(prob, pi);
       }
 
       AddTotalRotationConstraint(prob, pi);
 
-      // AddLinearizedControlConstraint(prob, pi);
+      //AddLinearizedControlConstraint(prob, pi);
       AddControlConstraint(prob, pi);
 
       AddCollisionConstraint(prob, pi);
@@ -171,8 +189,21 @@ namespace Needle {
           initVec.push_back(pi->initVec[i]);
         }
       }
+
+      IntegrateControls(initVec);
+
+      cout << "integrated" << endl;
+      for (int i = 0; i <= pi->T; ++i)
+      {
+        cout << pi->local_configs[i]->pose << endl;
+        cout << endl;
+      }
+
     }
+
     opt.initialize(initVec);
+
+
   }
 
   Matrix4d NeedleProblemHelper::TransformPose(const Matrix4d& pose, double phi, double Delta, double curvature) const {
@@ -215,7 +246,32 @@ namespace Needle {
 
             cout << Delta << " " << phi << " " << curvature << endl;
           }
+
+
+          // test error
+          for (int j = 0; j < pis[i]->T; ++j)
+          {
+            double phi = GetPhi(x, j, pis[i]);
+            double Delta = GetDelta(x, j, pis[i]);
+            double curvature = GetCurvature(x, j, pis[i]);
+
+            Matrix4d pose1 = pis[i]->local_configs[j]->pose;
+            Matrix4d pose1_update = TransformPose(pose1, phi, Delta, curvature);
+            Matrix4d pose2 = pis[i]->local_configs[j+1]->pose;
+            Vector6d err = logDown(pose1_update.inverse() * pose2);
+
+            cout << "err" << endl;
+            cout << err.transpose() << endl;
+            cout << "twist" << endl;
+            cout << twistvals.row(j).transpose() << endl;
+            cout << endl;
+          }
+
+
+
+
           setVec(x, pis[i]->twistvars.m_data, DblVec(pis[i]->twistvars.size(), 0));
+
         }
         return false;
       }
@@ -268,7 +324,7 @@ namespace Needle {
     AddVarArray(prob, pi->T, 1, -PI, PI, "phi", pi->phivars);
     pi->Delta_lb = (expUp(pi->final).topRightCorner<3, 1>() - expUp(pi->entry).topRightCorner<3, 1>()).norm() / pi->T;
     pi->Deltavar = prob.createVariables(singleton<string>("Delta"), singleton<double>(pi->Delta_lb),singleton<double>(INFINITY))[0];
-    AddVarArray(prob, pi->T, 1, 1. / (r_min*30), 1. / r_min, "curvature", pi->curvature_vars);
+    AddVarArray(prob, pi->T, 1, 0, 1. / r_min, "curvature", pi->curvature_vars);
   }
 
   void NeedleProblemHelper::InitLocalConfigurations(const KinBodyPtr robot, OptProb& prob, NeedleProblemInstancePtr pi) {
@@ -297,7 +353,7 @@ namespace Needle {
     }
   }
 
-  void NeedleProblemHelper::AddentryConstraint(OptProb& prob, NeedleProblemInstancePtr pi) {
+  void NeedleProblemHelper::AddEntryConstraint(OptProb& prob, NeedleProblemInstancePtr pi) {
     VarVector vars = pi->twistvars.row(pi->T);
 
     if (pi->entry_position_error_relax.norm() > 1e-4 || pi->entry_orientation_error_relax > 1e-4)
@@ -328,9 +384,9 @@ namespace Needle {
       coeffs_orientation << 1;
       coeffs_translation << 1, 1, 1;
 
-      prob.addConstraint(ConstraintPtr(new ConstraintFromFunc(f_orientation, vars, coeffs_orientation, EQ, "entry")));
+      prob.addConstraint(ConstraintPtr(new ConstraintFromFunc(f_orientation, vars, coeffs_orientation, INEQ, "entry")));
       pi->dynamics_constraints.push_back(prob.getConstraints().back());
-      prob.addConstraint(ConstraintPtr(new ConstraintFromFunc(f_translation, vars, coeffs_translation, EQ, "entry")));
+      prob.addConstraint(ConstraintPtr(new ConstraintFromFunc(f_translation, vars, coeffs_translation, INEQ, "entry")));
       pi->dynamics_constraints.push_back(prob.getConstraints().back());
 
     }
@@ -344,7 +400,7 @@ namespace Needle {
 
   }
 
-  void NeedleProblemHelper::AddfinalConstraint(OptProb& prob, NeedleProblemInstancePtr pi)
+  void NeedleProblemHelper::AddFinalConstraint(OptProb& prob, NeedleProblemInstancePtr pi)
   {
     VarVector vars = pi->twistvars.row(0);
     for (int i = 0; i < vars.size(); ++i)
@@ -353,18 +409,41 @@ namespace Needle {
       pi->dynamics_constraints.push_back(prob.getConstraints().back());
     }
 
+    /*
+    VarVector vars = pi->twistvars.row(0);
+    VectorOfVectorPtr f(new Needle::ExactPositionError(pi->local_configs[0], pi->final, shared_from_this()));
+    Vector6d coeffs;
+    coeffs << 1., 1., 1., this->coeff_orientation_error, this->coeff_orientation_error, this->coeff_orientation_error;
+    prob.addConstraint(ConstraintPtr(new ConstraintFromFunc(f, vars, coeffs, EQ, "final")));
+
+    pi->dynamics_constraints.push_back(prob.getConstraints().back());
+     */
   }
 
   void NeedleProblemHelper::AddControlConstraint(OptProb& prob, NeedleProblemInstancePtr pi) {
     for (int i = 0; i < pi->T; ++i) {
-      VarVector vars = concat(concat(pi->twistvars.row(i), pi->twistvars.row(i+1)), pi->phivars.row(i));
-      vars.push_back(pi->Deltavar);
-      vars = concat(vars, pi->curvature_vars.row(i));
-      VectorOfVectorPtr f(new Needle::ControlError(pi->local_configs[i], pi->local_configs[i+1], shared_from_this()));
-      VectorXd coeffs = VectorXd::Ones(boost::static_pointer_cast<Needle::ControlError>(f)->outputSize());
-      coeffs.tail<3>() *= this->coeff_orientation_error;
-      prob.addConstraint(ConstraintPtr(new ConstraintFromFunc(f, vars, coeffs, EQ, (boost::format("control%i")%i).str())));
-      pi->dynamics_constraints.push_back(prob.getConstraints().back());
+      if (i > 0)
+      {
+        VarVector vars = concat(concat(pi->twistvars.row(i), pi->twistvars.row(i+1)), pi->phivars.row(i));
+        vars.push_back(pi->Deltavar);
+        vars = concat(vars, pi->curvature_vars.row(i));
+        VectorOfVectorPtr f(new Needle::ControlError(pi->local_configs[i], pi->local_configs[i+1], shared_from_this()));
+        VectorXd coeffs = VectorXd::Ones(boost::static_pointer_cast<Needle::ControlError>(f)->outputSize());
+        coeffs.tail<3>() *= this->coeff_orientation_error;
+        prob.addConstraint(ConstraintPtr(new ConstraintFromFunc(f, vars, coeffs, EQ, (boost::format("control%i")%i).str())));
+        pi->dynamics_constraints.push_back(prob.getConstraints().back());
+      }
+      else // i = 0
+      {
+        VarVector vars = concat(pi->twistvars.row(i+1), pi->phivars.row(i));
+        vars.push_back(pi->Deltavar);
+        vars = concat(vars, pi->curvature_vars.row(i));
+        VectorOfVectorPtr f(new Needle::ControlErrorFirstFixed(pi->local_configs[i], pi->local_configs[i+1], shared_from_this()));
+        VectorXd coeffs = VectorXd::Ones(boost::static_pointer_cast<Needle::ControlErrorFirstFixed>(f)->outputSize());
+        coeffs.tail<3>() *= this->coeff_orientation_error;
+        prob.addConstraint(ConstraintPtr(new ConstraintFromFunc(f, vars, coeffs, EQ, (boost::format("control%i")%i).str())));
+        pi->dynamics_constraints.push_back(prob.getConstraints().back());
+      }
     }
   }
 
@@ -381,6 +460,19 @@ namespace Needle {
       pi->dynamics_constraints.push_back(prob.getConstraints().back());
     }
   }
+
+  void NeedleProblemHelper::AddTwistConstraint(OptProb& prob, NeedleProblemInstancePtr pi)
+  {
+    for (int i = 1; i <= pi->T; ++i)
+    {
+      VarVector vars = pi->twistvars.row(i);
+      VectorOfVectorPtr f(new Needle::TwistError(0.01, 0.1, shared_from_this(), pi));
+      VectorXd coeffs = VectorXd::Ones(boost::static_pointer_cast<Needle::TwistError>(f)->outputSize());
+      prob.addConstraint(ConstraintPtr(new ConstraintFromFunc(f, vars, coeffs, INEQ, (boost::format("twist%i")%i).str())));
+      pi->dynamics_constraints.push_back(prob.getConstraints().back());
+    }
+  }
+
 
   void NeedleProblemHelper::AddPoseConstraint(OptProb& prob, NeedleProblemInstancePtr pi) {
     for (int i = 0; i < pi->T; ++i) {
@@ -405,8 +497,8 @@ namespace Needle {
         prob.getConstraints().back()->setName((boost::format("collision_obstacle_%i (needle %i)")%i%pi->id).str());
       }
     } else {
-      for (int i = 0; i <= pi->T; ++i) {
-        prob.addConstraint(ConstraintPtr(new CollisionConstraint(collision_dist_pen, collision_coeff, pi->local_configs[i], pi->twistvars.row(i))));
+      for (int i = 1; i <= pi->T; ++i) {
+        prob.addConstraint(ConstraintPtr(new CollisionConstraint(collision_dist_pen, collision_coeff, pi->local_configs[i], pi->local_configs[i], pi->twistvars.row(i), pi->twistvars.row(i))));
         pi->collision_constraints.push_back(prob.getConstraints().back());
         prob.getConstraints().back()->setName((boost::format("collision_obstacle_%i (needle %i)")%i%pi->id).str());
       }
@@ -462,7 +554,6 @@ namespace Needle {
     this->method = NeedleProblemHelper::Colocation;
     this->rotation_cost = NeedleProblemHelper::UseRotationQuadraticCost;
     this->continuous_collision = true;
-    this->final_orientation_constraint = false;
     this->use_collision_clearance_cost = true;
 
     // parameters for the optimizer
@@ -475,8 +566,10 @@ namespace Needle {
     this->max_merit_coeff_increases = 5;
 
     this->coeff_rotation = 1.;
+    this->coeff_curvature = 1.;
     this->coeff_speed = 1.;
     this->coeff_rotation_regularization = 0.1;
+    this->coeff_curvature_regularization = 0.1;
     this->coeff_orientation_error = 1;
     this->collision_dist_pen = 0.05;
     this->collision_coeff = 10;
@@ -503,6 +596,8 @@ namespace Needle {
     config.add(new Parameter<int>("rotation_cost", &this->rotation_cost, "rotation_cost"));
     config.add(new Parameter<double>("coeff_rotation_regularization", &this->coeff_rotation_regularization, "coeff_rotation_regularization"));
     config.add(new Parameter<double>("coeff_rotation", &this->coeff_rotation, "coeff_rotation"));
+    config.add(new Parameter<double>("coeff_curvature_regularization", &this->coeff_curvature_regularization, "coeff_curvature_regularization"));
+    config.add(new Parameter<double>("coeff_curvature", &this->coeff_rotation, "coeff_curvature"));
     config.add(new Parameter<double>("coeff_speed", &this->coeff_speed, "coeff_speed"));
     config.add(new Parameter<double>("coeff_orientation_error", &this->coeff_orientation_error, "coeff_orientation_error"));
     config.add(new Parameter<double>("r_min", &this->r_min, "r_min"));
@@ -519,7 +614,6 @@ namespace Needle {
     config.add(new Parameter<bool>("use_collision_clearance_cost", &this->use_collision_clearance_cost, "use_collision_clearance_cost"));
     config.add(new Parameter<bool>("record_trust_region_history", &this->record_trust_region_history, "record_trust_region_history"));
     config.add(new Parameter<bool>("continuous_collision", &this->continuous_collision, "continuous_collision"));
-    config.add(new Parameter<bool>("final_orientation_constraint", &this->final_orientation_constraint, "final_orientation_constraint"));
     config.add(new Parameter<bool>("channel_planning", &this->channel_planning, "channel_planning"));
 
     CommandParser parser(config);
@@ -546,6 +640,7 @@ namespace Needle {
     Ts.clear();
     n_needles = 0;
     rotation_costs.clear();
+    curvature_costs.clear();
     speed_costs.clear();
     clearance_costs.clear();
   }

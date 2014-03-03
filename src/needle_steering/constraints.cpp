@@ -29,7 +29,8 @@ namespace Needle {
     Matrix4d current_pose = cfg->pose * expUp(a);
 
     Vector3d err = (current_pose.block<3, 1>(0, 3) - target_pose.block<3, 1>(0, 3)).array().abs();
-    err = (err - this->position_error_relax).cwiseMax(Vector3d::Zero());
+    //err = (err - this->position_error_relax).cwiseMax(Vector3d::Zero());
+    err = (err - this->position_error_relax);
 
     return err;
   }
@@ -43,7 +44,8 @@ namespace Needle {
     Vector3d current_rot = current_pose.topLeftCorner<3, 3>() * Vector3d(0, 0, 1);
     Vector3d target_rot = target_pose.topLeftCorner<3, 3>() * Vector3d(0, 0, 1);
 
-    double orientation_error = fmax(1 - cosangle(current_rot, target_rot) - this->orientation_error_relax, 0);
+    //double orientation_error = fmax(1 - cosangle(current_rot, target_rot) - this->orientation_error_relax, 0);
+    double orientation_error = 1 - cosangle(current_rot, target_rot) - this->orientation_error_relax;
 
     VectorXd err(1); err << orientation_error;
     return err;
@@ -102,6 +104,22 @@ namespace Needle {
   }
 
   int ControlError::outputSize() const {
+    return 6;
+  }
+
+
+  ControlErrorFirstFixed::ControlErrorFirstFixed(LocalConfigurationPtr cfg0, LocalConfigurationPtr cfg1, NeedleProblemHelperPtr helper) : cfg0(cfg0), cfg1(cfg1), body(cfg0->GetBodies()[0]), helper(helper) {}
+
+  VectorXd ControlErrorFirstFixed::operator()(const VectorXd& a) const {
+    Matrix4d pose1 = cfg0->pose;
+    Matrix4d pose2 = cfg1->pose * expUp(a.topRows(6));
+
+    double phi = a(6), Delta = a(7), curvature = a(8);
+    return logDown(helper->TransformPose(pose1, phi, Delta, curvature).inverse() * pose2);
+
+  }
+
+  int ControlErrorFirstFixed::outputSize() const {
     return 6;
   }
 
@@ -199,4 +217,25 @@ namespace Needle {
     return ret;
   }
 
+
+  TwistError::TwistError(double twist_translation_limit, double twist_rotation_limit, NeedleProblemHelperPtr helper, NeedleProblemInstancePtr pi) : twist_translation_limit(twist_translation_limit), twist_rotation_limit(twist_rotation_limit), helper(helper), pi(pi) {}
+
+  VectorXd TwistError::operator()(const VectorXd& a) const {
+    VectorXd twist_err(4);
+
+    twist_err(0) = fabs(a(0)) - this->twist_translation_limit;
+    twist_err(1) = fabs(a(1)) - this->twist_translation_limit;
+    twist_err(2) = fabs(a(2)) - this->twist_translation_limit;
+
+    Vector3d axisangle(a(3), a(4), a(5));
+    double angle = axisangle.norm();
+
+    twist_err(3) = angle - this->twist_rotation_limit;
+
+    return twist_err;
+  }
+
+  int TwistError::outputSize() const {
+    return 4;
+  }
 }

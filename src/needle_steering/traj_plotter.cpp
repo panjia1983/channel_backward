@@ -12,6 +12,7 @@ namespace Needle {
     EnvironmentBasePtr env = helper->pis[0]->local_configs[0]->GetEnv();
     
     //CollisionChecker::GetOrCreate(*env)->PlotCollisionGeometry(handles);//SetContactDistance(collision_dist_pen + 0.05);
+
     viewer->SetAllTransparency(planner->env_transparency);
     for (int k = 0; k < helper->pis.size(); ++k) {
       vector<KinBodyPtr> bodies = helper->pis[k]->local_configs[0]->GetBodies();

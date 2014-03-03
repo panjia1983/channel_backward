@@ -17,6 +17,8 @@ namespace Needle {
     int n_needles;
     double coeff_rotation;
     double coeff_rotation_regularization;
+    double coeff_curvature;
+    double coeff_curvature_regularization;
     double coeff_speed;
     double coeff_orientation_error;
     double improve_ratio_threshold;
@@ -33,7 +35,6 @@ namespace Needle {
     bool use_collision_clearance_cost;
     bool verbose;
     bool continuous_collision;
-    bool final_orientation_constraint;
     bool channel_planning;
     double env_transparency;
     double r_min;
@@ -55,6 +56,7 @@ namespace Needle {
     vector<ConstraintPtr> self_collision_constraints;
 
     vector<CostPtr> rotation_costs;
+    vector<CostPtr> curvature_costs;
     vector<CostPtr> speed_costs;
     vector<CostPtr> clearance_costs;
 
@@ -78,12 +80,14 @@ namespace Needle {
     void InitLocalConfigurations(const KinBodyPtr robot, OptProb& prob, NeedleProblemInstancePtr pi);
     void InitTrajectory(OptProb& prob, NeedleProblemInstancePtr pi);
     void AddRotationCost(OptProb& prob, NeedleProblemInstancePtr pi);
+    void AddCurvatureCost(OptProb& prob, NeedleProblemInstancePtr pi);
     void AddSpeedCost(OptProb& prob, NeedleProblemInstancePtr pi);
-    void AddentryConstraint(OptProb& prob, NeedleProblemInstancePtr pi);
-    void AddfinalConstraint(OptProb& prob, NeedleProblemInstancePtr pi);
+    void AddEntryConstraint(OptProb& prob, NeedleProblemInstancePtr pi);
+    void AddFinalConstraint(OptProb& prob, NeedleProblemInstancePtr pi);
     void AddChannelConstraint(OptProb& prob, NeedleProblemInstancePtr pi);
     void AddTotalCurvatureConstraint(OptProb& prob, NeedleProblemInstancePtr helper);
     void AddTotalCurvatureCost(OptProb& prob, NeedleProblemInstancePtr helper);
+    void AddTwistConstraint(OptProb& prob, NeedleProblemInstancePtr pi);
     void AddControlConstraint(OptProb& prob, NeedleProblemInstancePtr pi);
     void AddLinearizedControlConstraint(OptProb& prob, NeedleProblemInstancePtr pi);
     void AddTotalRotationConstraint(OptProb& prob, NeedleProblemInstancePtr pi);

@@ -113,8 +113,8 @@ namespace Needle {
 
 
       for (int i = 0; i < final_string_vec.size(); ++i) {
-        this->entry_position_error_relax.push_back(Vector3d(2.5, 2.5, 0.1));
-        this->entry_orientation_error_relax.push_back(0.5); // 0.01, 0.1744
+        this->entry_position_error_relax.push_back(Vector3d(2.5, 2.5, 2.5));
+        this->entry_orientation_error_relax.push_back(0.1744); // 0.01, 0.1744, 0.5
         this->final_distance_error_relax.push_back(0);
       }
 
@@ -254,7 +254,6 @@ namespace Needle {
     }
 
 
-
     for (int i = 0; i < n_needles; ++i) {
       this->Ts.push_back(T);
     }
@@ -342,12 +341,22 @@ namespace Needle {
           if (sols[i].size() > 0) {
             vector<VectorXd> subinitial;
             subinitial.push_back(sols[i]);
+
+            /*
             for (int j = 0; j < subinitial[0].size(); ++j) {
               if (!prev_converged[i]) {
                 if (this->channel_planning) subinitial[0](j) += normal() * 0.02; // the environment is less delicate, allowing for more noise
                 else subinitial[0](j) += normal() * 0.05;
               }
             }
+
+            */
+            if (!prev_converged[i])
+            {
+              subinitial[0] = PerturbSolution(subinitial[0]);
+            }
+
+
             helper->SetSolutions(subinitial, opt);
           }
 
@@ -485,6 +494,40 @@ namespace Needle {
 
     return sols;
 
+  }
+
+  VectorXd NeedleProblemPlanner::PerturbSolution(const VectorXd& sol) const
+  {
+    VectorXd perturbed_sol = sol;
+
+    NeedleProblemInstancePtr pi = this->helper->pis[0];
+    std::size_t T = pi->T;
+
+    double perturb_twist = 0.2;
+    double perturb_phi = 0.1;
+    double perturb_curvature = 0.1;
+
+    // perturb twist (except the final one)
+    for (int i = 1; i <= T; ++i)
+    {
+      VarVector vars = pi->twistvars.row(i);
+      for (int j = 0; j < vars.size(); ++j)
+      {
+        int index = vars[j].var_rep->index;
+        perturbed_sol[index] += (2 * rndnum() - 1) * perturb_twist;
+      }
+    }
+
+    for (int i = 0; i < T; ++i)
+    {
+      int phi_index, curvature_index;
+      phi_index = pi->phivars.row(i)[0].var_rep->index;
+      curvature_index = pi->curvature_vars.row(i)[0].var_rep->index;
+      perturbed_sol[phi_index] += (2 * rndnum() - 1) * perturb_phi;
+      perturbed_sol[curvature_index] += (2 * rndnum() - 1) * perturb_curvature;
+    }
+
+    return perturbed_sol;
   }
 
   Vector6d NeedleProblemPlanner::PerturbState(const Vector6d& state) {

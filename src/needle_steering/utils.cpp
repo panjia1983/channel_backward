@@ -3,6 +3,7 @@
 #include <tinyxml.h>
 #include <fstream>
 #include <algorithm>
+#include <unsupported/Eigen/MatrixFunctions>
 
 
 namespace Needle {
@@ -101,7 +102,7 @@ namespace Needle {
   }
 
   Matrix3d expRot(const Vector3d& x) {
-    /*
+
     double rr = x.squaredNorm();
     if (fabs(rr) < 1e-10) {
       return Matrix3d::Identity();
@@ -109,7 +110,7 @@ namespace Needle {
       double r = sqrt(rr);
       return rotMat(x * (sin(r) / r)) + Matrix3d::Identity() * cos(r) + (x*x.transpose()) * ((1 - cos(r)) / rr);
     }
-    */
+    /*
     double angle;
     double rr = x.squaredNorm();
     Vector3d axis(1., 0., 0.);
@@ -145,6 +146,7 @@ namespace Needle {
     yzm + xSin,
     z2*oneMinusCos + cs;
     return res;
+    */
   }
 
   double ACos (double value)
@@ -280,11 +282,19 @@ namespace Needle {
   }
 
   Matrix4d expUp(const Vector6d& x) {
+    /*
     Matrix4d X = Matrix4d::Identity();
     X.block<3, 3>(0, 0) = expRot(x.tail<3>());
     X.block<3, 1>(0, 3) = expA(x.tail<3>()) * x.head<3>();
     X(3, 3) = 1;
     return X;
+    */
+
+    Matrix4d X = Matrix4d::Identity();
+    X.block<3, 3>(0, 0) = rotMat(x.tail<3>());
+    X.block<3, 1>(0, 3) = x.head<3>();
+    X(3,3) = 0;
+    return X.exp();
   }
 
   Vector6d logDown(const Matrix4d& X) {
@@ -366,7 +376,91 @@ namespace Needle {
     return T;
   }
 
-  void saveMultiChannelBot(const Vector3d& translation,
+
+  void saveMultiChannelBot2(const Vector3d& translation,
+                            double density,
+                            double cylinder_radius,
+                            double cylinder_height,
+                            std::size_t n,
+                            const string& filename)
+  {
+    TiXmlDocument doc;
+    TiXmlElement* robot_elem = new TiXmlElement("Robot");
+    robot_elem->SetAttribute("name", "channelbot");
+    doc.LinkEndChild(robot_elem);
+
+    double delta = 0.5 * 2 * cylinder_radius * n - cylinder_radius;
+
+
+    {
+      TiXmlElement* kinbody_elem = new TiXmlElement("KinBody");
+      robot_elem->LinkEndChild(kinbody_elem);
+
+      TiXmlElement* body_elem = new TiXmlElement("Body");
+      body_elem->SetAttribute("name", "channelink");
+      body_elem->SetAttribute("type", "dynamic");
+      kinbody_elem->LinkEndChild(body_elem);
+
+      {
+        TiXmlElement* translation_elem = new TiXmlElement("Translation");
+        body_elem->LinkEndChild(translation_elem);
+        {
+          stringstream trans_v;
+          trans_v << -delta << " " << 0 << " " << 0;
+          TiXmlText* translation_value_elem = new TiXmlText(trans_v.str());
+          translation_elem->LinkEndChild(translation_value_elem);
+        }
+
+
+        TiXmlElement* mass_elem = new TiXmlElement("Mass");
+        mass_elem->SetAttribute("type", "mimicgeom");
+        body_elem->LinkEndChild(mass_elem);
+        {
+          TiXmlElement* density_elem = new TiXmlElement("density");
+          mass_elem->LinkEndChild(density_elem);
+
+          stringstream density_v;
+          density_v << density;
+          TiXmlText* density_value_elem = new TiXmlText(density_v.str());
+          density_elem->LinkEndChild(density_value_elem);
+        }
+
+        TiXmlElement* box_elem = new TiXmlElement("Geom");
+        box_elem->SetAttribute("type", "box");
+        body_elem->LinkEndChild(box_elem);
+        {
+          TiXmlElement* extents_elem = new TiXmlElement("extents");
+          box_elem->LinkEndChild(extents_elem);
+
+          stringstream extents_v;
+          extents_v << 2*cylinder_radius*n / 2 << " " << 2*cylinder_radius / 2 << " " << cylinder_height / 2;
+          TiXmlText* extents_value_elem = new TiXmlText(extents_v.str());
+          extents_elem->LinkEndChild(extents_value_elem);
+
+
+          TiXmlElement* translation_elem = new TiXmlElement("translation");
+          box_elem->LinkEndChild(translation_elem);
+
+          stringstream translation_v;
+          translation_v << 0 << " " << 0 << " " << 0;
+          TiXmlText* translation_value_elem = new TiXmlText(translation_v.str());
+          translation_elem->LinkEndChild(translation_value_elem);
+
+
+        }
+      }
+    }
+
+
+
+
+    bool succ = doc.SaveFile(filename.c_str());
+    if (!succ) cout << "save failed" << endl;
+    else cout << "save succ" << endl;
+    doc.Clear();
+  }
+
+  void saveMultiChannelBot3(const Vector3d& translation,
                            double density,
                            double cylinder_radius,
                            double cylinder_height,
@@ -382,6 +476,7 @@ namespace Needle {
       TiXmlElement* kinbody_elem = new TiXmlElement("KinBody");
       robot_elem->LinkEndChild(kinbody_elem);
 
+      double delta = 0.5 * 2 * cylinder_radius * n;
 
       for (std::size_t i = 0; i < n; ++i)
       {
@@ -397,7 +492,7 @@ namespace Needle {
           body_elem->LinkEndChild(translation_elem);
           {
             stringstream trans_v;
-            trans_v << translation(0) + i * 2 * cylinder_radius << " " << translation(1) << " " << translation(2);
+            trans_v << translation(0) + i * 2 * cylinder_radius - delta << " " << translation(1) << " " << translation(2);
             TiXmlText* translation_value_elem = new TiXmlText(trans_v.str());
             translation_elem->LinkEndChild(translation_value_elem);
           }
@@ -416,7 +511,7 @@ namespace Needle {
             density_elem->LinkEndChild(density_value_elem);
           }
 
-          TiXmlElement* cylinder_elem = new TiXmlElement("Geometry");
+          TiXmlElement* cylinder_elem = new TiXmlElement("Geom");
           cylinder_elem->SetAttribute("type", "cylinder");
           body_elem->LinkEndChild(cylinder_elem);
           {
@@ -446,7 +541,7 @@ namespace Needle {
           }
 
 
-          TiXmlElement* sphere_elem = new TiXmlElement("Geometry");
+          TiXmlElement* sphere_elem = new TiXmlElement("Geom");
           sphere_elem->SetAttribute("type", "sphere");
           body_elem->LinkEndChild(sphere_elem);
           {
@@ -454,7 +549,7 @@ namespace Needle {
             sphere_elem->LinkEndChild(translation_elem);
             {
               stringstream trans_v;
-              trans_v << "0 0 " << 0.5 * cylinder_height;
+              trans_v << 0 << " " << 0 << " " << 0.5 * cylinder_height;
               TiXmlText* translation_value_elem = new TiXmlText(trans_v.str());
               translation_elem->LinkEndChild(translation_value_elem);
             }
@@ -477,6 +572,132 @@ namespace Needle {
     else cout << "save succ" << endl;
     doc.Clear();
   }
+
+
+  void saveMultiChannelBot(const Vector3d& translation,
+                           double density,
+                           double cylinder_radius,
+                           double cylinder_height,
+                           std::size_t n,
+                           const string& filename)
+  {
+    TiXmlDocument doc;
+    TiXmlElement* robot_elem = new TiXmlElement("Robot");
+    robot_elem->SetAttribute("name", "channelbot");
+    doc.LinkEndChild(robot_elem);
+
+    {
+      TiXmlElement* kinbody_elem = new TiXmlElement("KinBody");
+      robot_elem->LinkEndChild(kinbody_elem);
+
+
+      double delta = 0.5 * 2 * cylinder_radius * n - cylinder_radius;
+
+      TiXmlElement* body_elem = new TiXmlElement("Body");
+      body_elem->SetAttribute("name", "channelink");
+      body_elem->SetAttribute("type", "dynamic");
+      kinbody_elem->LinkEndChild(body_elem);
+
+      TiXmlElement* translation_elem = new TiXmlElement("Translation");
+      body_elem->LinkEndChild(translation_elem);
+      {
+        stringstream trans_v;
+        trans_v << translation(0) << " " << translation(1) << " " << translation(2);
+        TiXmlText* translation_value_elem = new TiXmlText(trans_v.str());
+        translation_elem->LinkEndChild(translation_value_elem);
+      }
+
+      TiXmlElement* mass_elem = new TiXmlElement("Mass");
+      mass_elem->SetAttribute("type", "mimicgeom");
+      body_elem->LinkEndChild(mass_elem);
+      {
+        TiXmlElement* density_elem = new TiXmlElement("density");
+        mass_elem->LinkEndChild(density_elem);
+
+        stringstream density_v;
+        density_v << density;
+        TiXmlText* density_value_elem = new TiXmlText(density_v.str());
+        density_elem->LinkEndChild(density_value_elem);
+      }
+
+
+
+      for (std::size_t i = 0; i < n; ++i)
+      {
+        stringstream id_v;
+        id_v << i;
+
+        TiXmlElement* cylinder_elem = new TiXmlElement("Geom");
+        cylinder_elem->SetAttribute("type", "cylinder");
+        body_elem->LinkEndChild(cylinder_elem);
+        {
+          TiXmlElement* radius_elem = new TiXmlElement("radius");
+          cylinder_elem->LinkEndChild(radius_elem);
+
+          stringstream radius_v;
+          radius_v << cylinder_radius;
+          TiXmlText* radius_value_elem = new TiXmlText(radius_v.str());
+          radius_elem->LinkEndChild(radius_value_elem);
+
+
+          TiXmlElement* height_elem = new TiXmlElement("height");
+          cylinder_elem->LinkEndChild(height_elem);
+
+          stringstream height_v;
+          height_v << cylinder_height;
+          TiXmlText* height_value_elem = new TiXmlText(height_v.str());
+          height_elem->LinkEndChild(height_value_elem);
+
+
+          TiXmlElement* translation_elem = new TiXmlElement("translation");
+          cylinder_elem->LinkEndChild(translation_elem);
+          {
+            stringstream trans_v;
+            trans_v << i * cylinder_radius * 2 - delta << " " << 0 << " " << 0;
+            TiXmlText* translation_value_elem = new TiXmlText(trans_v.str());
+            translation_elem->LinkEndChild(translation_value_elem);
+          }
+
+
+          TiXmlElement* rotationaxis_elem = new TiXmlElement("rotationaxis");
+          cylinder_elem->LinkEndChild(rotationaxis_elem);
+
+          TiXmlText* rotation_axis_value_elem = new TiXmlText("1 0 0 90");
+          rotationaxis_elem->LinkEndChild(rotation_axis_value_elem);
+        }
+
+
+        TiXmlElement* sphere_elem = new TiXmlElement("Geom");
+        sphere_elem->SetAttribute("type", "sphere");
+        body_elem->LinkEndChild(sphere_elem);
+        {
+          TiXmlElement* translation_elem = new TiXmlElement("translation");
+          sphere_elem->LinkEndChild(translation_elem);
+          {
+            stringstream trans_v;
+            trans_v << i * cylinder_radius * 2 - delta << " " << 0 << " " << 0.5 * cylinder_height;
+            TiXmlText* translation_value_elem = new TiXmlText(trans_v.str());
+            translation_elem->LinkEndChild(translation_value_elem);
+          }
+
+
+          TiXmlElement* radius_elem = new TiXmlElement("radius");
+          sphere_elem->LinkEndChild(radius_elem);
+
+          stringstream radius_v;
+          radius_v << cylinder_radius;
+          TiXmlText* radius_value_elem = new TiXmlText(radius_v.str());
+          radius_elem->LinkEndChild(radius_value_elem);
+        }
+      }
+    }
+
+    bool succ = doc.SaveFile(filename.c_str());
+    if (!succ) cout << "save failed" << endl;
+    else cout << "save succ" << endl;
+    doc.Clear();
+  }
+
 
 
   // in backward order

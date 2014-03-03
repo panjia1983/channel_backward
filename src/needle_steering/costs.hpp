@@ -18,9 +18,9 @@ namespace Needle {
     NeedleProblemInstancePtr pi;
   };
 
-  class RotationQuadraticCost : public Cost {
+  class DiffGeometryQuadraticCost : public Cost {
   public:
-    RotationQuadraticCost(const VarVector& vars, double coeff, NeedleProblemHelperPtr helper);
+    DiffGeometryQuadraticCost(const VarVector& vars, const string& cost_name, double coeff, NeedleProblemHelperPtr helper);
     virtual double value(const vector<double>& xvec, Model* model);
     virtual ConvexObjectivePtr convex(const vector<double>& xvec);
   private:
@@ -30,9 +30,9 @@ namespace Needle {
     NeedleProblemHelperPtr helper;
   };
 
-  class RotationL1Cost : public Cost {
+  class DiffGeometryL1Cost : public Cost {
   public:
-    RotationL1Cost(const VarVector& vars, double coeff, NeedleProblemHelperPtr helper);
+    DiffGeometryL1Cost(const VarVector& vars, const string& cost_name, double coeff, NeedleProblemHelperPtr helper);
     virtual double value(const vector<double>& xvec, Model* model);
     virtual ConvexObjectivePtr convex(const vector<double>& xvec);
   private:

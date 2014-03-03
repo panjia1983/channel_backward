@@ -60,6 +60,9 @@ namespace Needle {
 
     NeedleProblemPlanner(int argc, char **argv);
     ~NeedleProblemPlanner();
+
+    VectorXd PerturbSolution(const VectorXd& sol) const;
+
     Vector6d PerturbState(const Vector6d& state);
     vector<VectorXd> Solve(const vector<VectorXd>& initial=vector<VectorXd>());
     vector<VectorXd> GetSolutionsWithoutFirstTimestep(const vector<VectorXd>& sol);
