@@ -22,37 +22,39 @@ namespace Needle {
     return out;
   }
 
-  DiffGeometryQuadraticCost::DiffGeometryQuadraticCost(const VarVector& vars, const string& cost_name, double coeff, NeedleProblemHelperPtr helper) : Cost(cost_name), vars(vars), coeff(coeff), helper(helper) {
+  RotationQuadraticCost::RotationQuadraticCost(const VarVector& vars, double coeff, NeedleProblemHelperPtr helper) : Cost("Rotation"), vars(vars), coeff(coeff), helper(helper) {
     for (int i = 0; i < vars.size(); ++i) {
       exprInc(expr, exprMult(exprSquare(vars[i]), coeff));
     }
   }
 
-  double DiffGeometryQuadraticCost::value(const vector<double>& xvec, Model* model) {
+  double RotationQuadraticCost::value(const vector<double>& xvec, Model* model) {
     VectorXd vals = getVec(xvec, vars);
     return vals.array().square().sum() * coeff;
   }
 
-  ConvexObjectivePtr DiffGeometryQuadraticCost::convex(const vector<double>& xvec) {
+  ConvexObjectivePtr RotationQuadraticCost::convex(const vector<double>& xvec) {
     ConvexObjectivePtr out(new ConvexObjective());
     out->addQuadExpr(expr);
     return out;
   }
 
-  DiffGeometryL1Cost::DiffGeometryL1Cost(const VarVector& vars, const string& cost_name, double coeff, NeedleProblemHelperPtr helper) : Cost(cost_name), vars(vars), coeff(coeff), helper(helper) {}
+  RotationL1Cost::RotationL1Cost(const VarVector& vars, double coeff, NeedleProblemHelperPtr helper) : Cost("Rotation"), vars(vars), coeff(coeff), helper(helper) {}
 
-  double DiffGeometryL1Cost::value(const vector<double>& xvec, Model* model) {
+  double RotationL1Cost::value(const vector<double>& xvec, Model* model) {
     VectorXd vals = getVec(xvec, vars);
     return vals.array().abs().sum() * coeff;
   }
 
-  ConvexObjectivePtr DiffGeometryL1Cost::convex(const vector<double>& xvec) {
+  ConvexObjectivePtr RotationL1Cost::convex(const vector<double>& xvec) {
     ConvexObjectivePtr out(new ConvexObjective());
     for (int i = 0; i < vars.size(); ++i) {
       out->addAbs(AffExpr(vars[i]), coeff);
     }
     return out;
   }
+
+
 
   NeedleCollisionClearanceCost::NeedleCollisionClearanceCost(NeedleProblemHelperPtr helper, double coeff) :
     Cost("needle_collision_clearance"),

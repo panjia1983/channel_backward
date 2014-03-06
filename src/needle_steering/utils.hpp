@@ -28,6 +28,7 @@ namespace Needle {
                            double density,
                            double cylinder_radius,
                            double cylinder_height,
+                           double rotation_axis_pos,
                            std::size_t n,
                            const string& filename);
 
@@ -35,10 +36,11 @@ namespace Needle {
                             double density,
                             double cylinder_radius,
                             double cylinder_height,
+                            double rotation_axis_pos,
                             std::size_t n,
                             const string& filename);
 
-  void readInitTraj(const string& filename, vector<Matrix4d>& poses, vector<VectorXd>& controls);
+  void readInitTraj(const string& filename, vector<vector<Matrix4d> >& trajs, vector<vector<VectorXd> >& controls);
 
 
 

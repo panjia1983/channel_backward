@@ -127,9 +127,6 @@ namespace Needle {
   LinearizedControlError::LinearizedControlError(LocalConfigurationPtr cfg0, LocalConfigurationPtr cfg1, NeedleProblemHelperPtr helper) : cfg0(cfg0), cfg1(cfg1), body(cfg0->GetBodies()[0]), helper(helper) {}
 
   VectorXd LinearizedControlError::operator()(const VectorXd& a) const {
-    Matrix4d pose1 = cfg0->pose * expUp(a.topRows(6));
-    Matrix4d pose2 = cfg1->pose * expUp(a.middleRows(6,6));
-
     Vector6d x1 = a.topRows(6);
     Vector6d x2 = a.middleRows(6,6);
     double phi = a(12), Delta = a(13), curvature = a(14);
@@ -160,6 +157,39 @@ namespace Needle {
   }
 
 
+
+  LinearizedControlErrorFirstFixed::LinearizedControlErrorFirstFixed(LocalConfigurationPtr cfg0, LocalConfigurationPtr cfg1, NeedleProblemHelperPtr helper) : cfg0(cfg0), cfg1(cfg1), body(cfg0->GetBodies()[0]), helper(helper) {}
+
+  VectorXd LinearizedControlErrorFirstFixed::operator()(const VectorXd& a) const {
+    Vector6d x2 = a.topRows(6);
+    double phi = a(6), Delta = a(7), curvature = a(8);
+    double phi_ref = cfg0->phi, Delta_ref = cfg0->Delta, curvature_ref = cfg0->curvature;
+
+    MatrixXd F = MatrixXd::Zero(6,6);
+    F.topLeftCorner(3, 3) = -rotMat(Vector3d(Delta_ref*curvature_ref, 0, phi_ref));
+    F.topRightCorner(3, 3) = -rotMat(Vector3d(0, 0, Delta_ref));
+    F.bottomRightCorner(3, 3) = -rotMat(Vector3d(Delta_ref*curvature_ref, 0, phi_ref));
+
+    MatrixXd G = MatrixXd::Zero(6,6);
+    G(2, 0) = 1;
+    G(3, 2) = 1;
+    G(5, 1) = 1;
+
+    MatrixXd A = F.exp();
+    MatrixXd halfF = 0.5*F;
+    MatrixXd B = (1/6.0) * (G + 4.0*(halfF.exp()*G) + A*G);
+
+    Vector3d u;
+    u << Delta - Delta_ref, phi - phi_ref, Delta*curvature - Delta_ref*curvature_ref;
+
+    return x2 - B * u;
+  }
+
+  int LinearizedControlErrorFirstFixed::outputSize() const {
+    return 6;
+  }
+
+
   ChannelSurfaceDistance::ChannelSurfaceDistance(LocalConfigurationPtr cfg, NeedleProblemHelperPtr helper) : cfg(cfg), helper(helper) {} 
 
   VectorXd ChannelSurfaceDistance::operator()(const VectorXd& a) const {
@@ -180,9 +210,9 @@ namespace Needle {
     
   }
 
-  TotalCurvatureError::TotalCurvatureError(double total_curvature_limit, NeedleProblemHelperPtr helper, NeedleProblemInstancePtr pi) : total_curvature_limit(total_curvature_limit), helper(helper), pi(pi) {}
+  CurvatureError::CurvatureError(double total_curvature_limit, NeedleProblemHelperPtr helper, NeedleProblemInstancePtr pi) : total_curvature_limit(total_curvature_limit), helper(helper), pi(pi) {}
 
-  VectorXd TotalCurvatureError::operator()(const VectorXd& a) const {
+  VectorXd CurvatureError::operator()(const VectorXd& a) const {
     DblVec curvatures;
     DblVec Deltas;
     curvatures = toDblVec(a.head(pi->curvature_vars.size()));
@@ -190,16 +220,18 @@ namespace Needle {
     VectorXd ret(1);
     ret(0) = -this->total_curvature_limit;
     for (int i = 0; i < curvatures.size(); ++i) {
-      ret(0) += curvatures[i] * Deltas[i];
+      ret(0) += fabs(curvatures[i]) * Deltas[i];
     }
     return ret;
   }
 
 
-  TotalRotationError::TotalRotationError(double total_rotation_limit, NeedleProblemHelperPtr helper, NeedleProblemInstancePtr pi) : total_rotation_limit(total_rotation_limit), helper(helper), pi(pi) {}
+  RotationError::RotationError(double total_rotation_limit, NeedleProblemHelperPtr helper, NeedleProblemInstancePtr pi) : total_rotation_limit(total_rotation_limit), helper(helper), pi(pi) {}
 
-  VectorXd TotalRotationError::operator()(const VectorXd& a) const {
-    DblVec phis = toDblVec(a);
+  VectorXd RotationError::operator()(const VectorXd& a) const {
+    DblVec phis;
+    DblVec Deltas;
+    phis = toDblVec(a);
     VectorXd ret(1);
     ret(0) = -this->total_rotation_limit;
     for (int i = 0; i < phis.size(); ++i) {
@@ -209,11 +241,18 @@ namespace Needle {
   }
 
 
-  TotalCurvatureCostError::TotalCurvatureCostError(double total_curvature_limit, NeedleProblemHelperPtr helper, NeedleProblemInstancePtr pi) : err(new TotalCurvatureError(total_curvature_limit, helper, pi)) {}
+  CurvatureCost::CurvatureCost(NeedleProblemHelperPtr helper, NeedleProblemInstancePtr pi) : helper(helper), pi(pi) {}
 
-  VectorXd TotalCurvatureCostError::operator()(const VectorXd& a) const {
-    VectorXd ret = err->operator()(a);
-    ret(0) += err->total_curvature_limit;
+  double CurvatureCost::operator()(const VectorXd& a) const {
+    DblVec curvatures;
+    DblVec Deltas;
+    curvatures = toDblVec(a.head(pi->curvature_vars.size()));
+    Deltas = DblVec(pi->curvature_vars.size(), a(a.size() - 1));
+    double ret = 0;
+    for (int i = 0; i < curvatures.size(); ++i) {
+      double tmp = curvatures[i] * Deltas[i];
+      ret += tmp * tmp;
+    }
     return ret;
   }
 

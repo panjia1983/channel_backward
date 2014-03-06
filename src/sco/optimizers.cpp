@@ -145,18 +145,18 @@ vector<string> getCntNames(const vector<ConstraintPtr>& cnts) {
 void printCostInfo(const vector<double>& old_cost_vals, const vector<double>& model_cost_vals, const vector<double>& new_cost_vals,
                   const vector<double>& old_cnt_vals, const vector<double>& model_cnt_vals, const vector<double>& new_cnt_vals,
     const vector<string>& cost_names, const vector<string>& cnt_names, double merit_coeff) {
-    printf("%15s | %10s | %10s | %10s | %10s\n", "", "oldexact", "dapprox", "dexact", "ratio");
-    printf("%15s | %10s---%10s---%10s---%10s\n", "COSTS", "----------", "----------", "----------", "----------");
+    printf("%15s | %10s | %10s | %10s | %10s\n", "", "oldexact", "newexact", "dapprox", "dexact", "ratio");
+    printf("%15s | %10s---%10s---%10s---%10s\n", "COSTS", "----------", "----------", "----------", "----------", "----------");
     for (size_t i=0; i < old_cost_vals.size(); ++i) {
       double approx_improve = old_cost_vals[i] - model_cost_vals[i];
       double exact_improve = old_cost_vals[i] - new_cost_vals[i];
       if (fabs(approx_improve) > 1e-8) 
-        printf("%15s | %10.3e | %10.3e | %10.3e | %10.3e\n", cost_names[i].c_str(), old_cost_vals[i], approx_improve, exact_improve, exact_improve/approx_improve);
+        printf("%15s | %10.3e | %10.3e | %10.3e | %10.3e | %10.3e\n", cost_names[i].c_str(), old_cost_vals[i], new_cost_vals[i], approx_improve, exact_improve, exact_improve/approx_improve);
       else
-        printf("%15s | %10.3e | %10.3e | %10.3e | %10s\n",cost_names[i].c_str(), old_cost_vals[i], approx_improve, exact_improve, "  ------  ");
+        printf("%15s | %10.3e | %10.3e | %10.3e | %10.3e | %10s\n",cost_names[i].c_str(), old_cost_vals[i], new_cost_vals[i], approx_improve, exact_improve, "  ------  ");
     }
     if (cnt_names.size() == 0) return;
-    printf("%15s | %10s---%10s---%10s---%10s\n", "CONSTRAINTS", "----------", "----------", "----------", "----------");
+    printf("%15s | %10s---%10s---%10s---%10s\n", "CONSTRAINTS", "----------", "----------", "----------", "----------", "----------");
     for (size_t i=0; i < old_cnt_vals.size(); ++i) {
       if (cnt_names[i].find("collision") != std::string::npos && new_cnt_vals[i] < 1e-8 && old_cnt_vals[i] < 1e-8) {
         continue;
@@ -164,9 +164,9 @@ void printCostInfo(const vector<double>& old_cost_vals, const vector<double>& mo
       double approx_improve = old_cnt_vals[i] - model_cnt_vals[i];
       double exact_improve = old_cnt_vals[i] - new_cnt_vals[i];
       if (fabs(approx_improve) > 1e-8)
-        printf("%15s | %10.3e | %10.3e | %10.3e | %10.3e\n", cnt_names[i].c_str(), merit_coeff*old_cnt_vals[i], merit_coeff*approx_improve, merit_coeff*exact_improve, exact_improve/approx_improve); 
+        printf("%15s | %10.3e | %10.3e | %10.3e | %10.3e | %10.3e\n", cnt_names[i].c_str(), merit_coeff*old_cnt_vals[i], new_cnt_vals[i], merit_coeff*approx_improve, merit_coeff*exact_improve, exact_improve/approx_improve);
       else 
-        printf("%15s | %10.3e | %10.3e | %10.3e | %10s\n", cnt_names[i].c_str(), merit_coeff*old_cnt_vals[i], merit_coeff*approx_improve, merit_coeff*exact_improve, "  ------  "); 
+        printf("%15s | %10.3e | %10.3e | %10.3e | %10.3e | %10s\n", cnt_names[i].c_str(), merit_coeff*old_cnt_vals[i], new_cnt_vals[i], merit_coeff*approx_improve, merit_coeff*exact_improve, "  ------  ");
     }
 
 }
@@ -181,6 +181,7 @@ vector<ConvexObjectivePtr> cntsToCosts(const vector<ConvexConstraintsPtr>& cnts,
     }
     BOOST_FOREACH(const AffExpr& aff, cnt->ineqs_) {
       obj->addHinge(aff, err_coeff);
+      //obj->addL2Norm(aff);
     }
     out.push_back(obj);
   }
@@ -388,6 +389,12 @@ OptStatus BasicTrustRegionSQP::optimize() {
 
         // the n variables of the OptProb happen to be the first n variables in the Model
         new_x = DblVec(model_var_vals.begin(), model_var_vals.begin() + x_.size());
+
+
+        // cout << "new_x" << endl;
+        // for (int i = 0; i < new_x.size(); ++i)
+        //   cout << new_x[i] << " ";
+        // cout << endl;
 
         if (GetLogLevel() >= util::LevelDebug) {
           DblVec cnt_costs1 = evaluateModelCosts(cnt_cost_models, model_var_vals, model_.get());

@@ -87,6 +87,15 @@ namespace Needle {
     int outputSize() const;
   };
 
+  struct LinearizedControlErrorFirstFixed : public VectorOfVector {
+    LocalConfigurationPtr cfg0, cfg1;
+    KinBodyPtr body;
+    NeedleProblemHelperPtr helper;
+    LinearizedControlErrorFirstFixed(LocalConfigurationPtr cfg0, LocalConfigurationPtr cfg1, NeedleProblemHelperPtr helper);
+    VectorXd operator()(const VectorXd& a) const;
+    int outputSize() const;
+  };
+
   struct ChannelSurfaceDistance : public VectorOfVector {
     LocalConfigurationPtr cfg;
     NeedleProblemHelperPtr helper;
@@ -94,26 +103,27 @@ namespace Needle {
     VectorXd operator()(const VectorXd& a) const;
   };
 
-  struct TotalCurvatureError : public VectorOfVector {
+  struct CurvatureError : public VectorOfVector {
     NeedleProblemHelperPtr helper;
     NeedleProblemInstancePtr pi;
     double total_curvature_limit;
-    TotalCurvatureError(double total_curvature_limit, NeedleProblemHelperPtr helper, NeedleProblemInstancePtr pi);
+    CurvatureError(double total_curvature_limit, NeedleProblemHelperPtr helper, NeedleProblemInstancePtr pi);
     VectorXd operator()(const VectorXd& a) const;
   };
 
-  struct TotalRotationError : public VectorOfVector {
+  struct RotationError : public VectorOfVector {
     NeedleProblemHelperPtr helper;
     NeedleProblemInstancePtr pi;
     double total_rotation_limit;
-    TotalRotationError(double total_rotation_limit, NeedleProblemHelperPtr helper, NeedleProblemInstancePtr pi);
+    RotationError(double total_rotation_limit, NeedleProblemHelperPtr helper, NeedleProblemInstancePtr pi);
     VectorXd operator()(const VectorXd& a) const;
   };
 
-  struct TotalCurvatureCostError : public VectorOfVector {
-    boost::shared_ptr<TotalCurvatureError> err;
-    TotalCurvatureCostError(double total_curvature_limit, NeedleProblemHelperPtr helper, NeedleProblemInstancePtr pi);
-    VectorXd operator()(const VectorXd& a) const;
+  struct CurvatureCost : public ScalarOfVector {
+    NeedleProblemHelperPtr helper;
+    NeedleProblemInstancePtr pi;
+    CurvatureCost(NeedleProblemHelperPtr helper, NeedleProblemInstancePtr pi);
+    double operator()(const VectorXd& a) const;
   };
 
   struct TwistError : public VectorOfVector {

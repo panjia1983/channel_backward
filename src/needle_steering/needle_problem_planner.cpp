@@ -53,6 +53,8 @@ namespace Needle {
     int T = 25;
     n_channels = 1;
     use_init_traj = false;
+    rotation_axis_index = -1;
+    simultaneous_planning = false;
     
     Config config;
     config.add(new Parameter<bool>("stage_plotting", &this->stage_plotting, "stage_plotting"));
@@ -81,39 +83,27 @@ namespace Needle {
     config.add(new Parameter<bool>("perturb_initialization", &this->perturb_initialization, "perturb_initialization"));
     config.add(new Parameter<int>("T", &T, "T"));
     config.add(new Parameter<int>("max_sequential_solves", &max_sequential_solves, "max_sequential_solves"));
+    config.add(new Parameter<double>("rotation_axis_index", &rotation_axis_index, "rotation_axis_index"));
+
     CommandParser parser(config);
     parser.read(argc, argv, true);
 
+
+    if (rotation_axis_index < 0)
+      rotation_axis_index = (n_channels - 1) / 2;
+
     if (channel_planning) {
       if (entry_string_vec.size() == 0) {
-
-        entry_string_vec.push_back("-1.25,0.0,0,0,0,0");
-        final_string_vec.push_back("-1.25,0.0,7,-1.1780972450961724,-0.0,-0.0");
-        entry_string_vec.push_back("1.25,0.0,0,0,0,0");
-        final_string_vec.push_back("1.25,0.0,7,1.1780972450961724,0.0,0.0");
-        entry_string_vec.push_back("0.0,-1.25,0,0,0,0");
-        final_string_vec.push_back("0.0,-1.25,7,-0.0,-1.1780972450961724,-0.0");
-        entry_string_vec.push_back("0.0,1.25,0,0,0,0");
-        final_string_vec.push_back("0.0,1.25,7,0.0,1.1780972450961724,0.0");
-        entry_string_vec.push_back("-1.5556349186104046,-1.5556349186104048,0,0,0,0");
-        final_string_vec.push_back("-1.5556349186104046,-1.5556349186104048,3.5,0.0,0.0,0.0");
-        entry_string_vec.push_back("-2.12503681783595,-0.5694018992255463,0,0,0,0");
-        final_string_vec.push_back("-2.12503681783595,-0.5694018992255463,3.5,0.0,0.0,0.0");
-        entry_string_vec.push_back("-2.1250368178359507,0.5694018992255448,0,0,0,0");
-        final_string_vec.push_back("-2.1250368178359507,0.5694018992255448,3.5,0.0,0.0,0.0");
-        entry_string_vec.push_back("-1.555634918610405,1.5556349186104046,0,0,0,0");
-        final_string_vec.push_back("-1.555634918610405,1.5556349186104046,3.5,0.0,0.0,0.0");
-        entry_string_vec.push_back("1.4142135623730951,1.414213562373095,0,0,0,0");
-        final_string_vec.push_back("1.4142135623730951,1.414213562373095,3.5,0.0,0.39269908169872414,0.0");
-        entry_string_vec.push_back("2.0,0.0,0,0,0,0");
-        final_string_vec.push_back("2.0,0.0,3.5,0.0,0.39269908169872414,0.0");
-        entry_string_vec.push_back("1.4142135623730951,-1.414213562373095,0,0,0,0");
-        final_string_vec.push_back("1.4142135623730951,-1.414213562373095,3.5,0.0,0.39269908169872414,0.0");
+        entry_string_vec.push_back("0,0,0,3.14,0,0");
+        final_string_vec.push_back("0,0,8.5,3.14,0,0");
+        entry_string_vec.push_back("0,1,0,3.14,0,0");
+        final_string_vec.push_back("0,1,8.5,3.14,0,0");
+        entry_string_vec.push_back("0,-1,0,3.14,0,0");
+        final_string_vec.push_back("0,-1,8.5,3.14,0,0");
       }
 
-
       for (int i = 0; i < final_string_vec.size(); ++i) {
-        this->entry_position_error_relax.push_back(Vector3d(2.5, 2.5, 2.5));
+        this->entry_position_error_relax.push_back(Vector3d(2.5, 2.5, 0.1));
         this->entry_orientation_error_relax.push_back(0.1744); // 0.01, 0.1744, 0.5
         this->final_distance_error_relax.push_back(0);
       }
@@ -181,7 +171,17 @@ namespace Needle {
     {
       Vector3d t;
       t << 0, 0, 0;
-      saveMultiChannelBot(t, 1, 0.1, 0.5, this->n_channels, this->data_dir + "/test.xml");
+      double radius = 0.1;
+      double height = 0.5;
+      double density = 1;
+      double rotation_axis_pos;
+
+      // rotation_axis_pos = (this->n_channels - 1) * radius; // center
+      // rotation_axis_pos = 2*(this->n_channels - 1) * radius // channel n-1
+      //rotation_axis_pos = 0; // channel 0
+
+      rotation_axis_pos = radius * 2 * this->rotation_axis_index;
+      saveMultiChannelBot(t, density, radius, height, rotation_axis_pos, this->n_channels, this->data_dir + "/test.xml");
       this->robot_file_path = this->data_dir + "/test.xml";
     }
 
@@ -209,54 +209,107 @@ namespace Needle {
         finals.push_back(logDown(se4Up(toVectorXd(final_vec))));
       }
 
-      init_trajs.resize(n_needles);
-      init_controls.resize(n_needles);
+      this->init_trajs.resize(n_needles);
+      this->init_controls.resize(n_needles);
+
+      for (int i = 0; i < n_needles; ++i) {
+        this->Ts.push_back(T);
+      }
     }
     else
     {
-      vector<Matrix4d> poses;
-      vector<VectorXd> controls;
-      readInitTraj(this->init_traj_path, poses, controls);
+      vector<vector<Matrix4d> > trajs;
+      vector<vector<VectorXd> > controls;
+      readInitTraj(this->init_traj_path, trajs, controls);
 
-      for (size_t i = 0; i < poses.size(); ++i)
+
+      this->n_needles = trajs.size();
+      this->sim_in_collision = vector<bool>(this->n_needles, false);
+      this->distance_to_final = vector<double>(this->n_needles, 0);
+
+
+      /*
+      for (size_t i = 0; i < trajs.size(); ++i)
       {
-        cout << poses[i] << endl;
+        cout << "traj " << i << endl;
+        for (size_t j = 0; j < trajs[i].size(); ++j)
+        {
+          cout << trajs[i][j] << endl;
+          cout << endl;
+        }
         cout << endl;
       }
 
       for (size_t i = 0; i < controls.size(); ++i)
       {
-        cout << controls[i].transpose() << endl;
+        cout << "control " << i << endl;
+        for (size_t j = 0; j < controls[i].size(); ++j)
+        {
+          cout << controls[i][j].transpose() << endl;
+          cout << endl;
+        }
         cout << endl;
       }
 
-      // if has initial traj, then just use that T
-      T = poses.size() - 1;
+      */
+
+
       this->entries.clear();
       this->finals.clear();
 
+
+      for (int i = 0; i < n_needles; ++i)
+      {
+        DblVec entry_vec;
+        DblVec final_vec;
+
+        if (i >= entry_string_vec.size())
+          strtk::parse(entry_string_vec.back(), ",", entry_vec);
+        else
+          strtk::parse(entry_string_vec[i], ",", entry_vec);
+
+        this->entries.push_back(logDown(se4Up(toVectorXd(entry_vec))));
+      }
+
+
       this->init_trajs.clear();
-      vector<Vector6d> traj;
-      for (size_t i = 0; i < poses.size(); ++i)
-        traj.push_back(logDown(poses[i]));
-      this->init_trajs.push_back(traj);
-      this->init_controls.push_back(controls);
 
-      this->entries.push_back(this->init_trajs[0].back());
-      this->finals.push_back(this->init_trajs[0][0]);
+      for (size_t i = 0; i < trajs.size(); ++i)
+      {
+        vector<Vector6d> traj;
+        for (size_t j = 0; j < trajs[i].size(); ++j)
+          traj.push_back(logDown(trajs[i][j]));
+        this->init_trajs.push_back(traj);
+        this->init_controls.push_back(controls[i]);
+        this->finals.push_back(traj[0]);
+      }
 
+
+      /*
       cout << this->entries[0].transpose() << endl;
       cout << this->finals[0].transpose() << endl;
+      */
 
-      this->n_needles = 1;
-      this->sim_in_collision = vector<bool>(this->n_needles, false);
-      this->distance_to_final = vector<double>(this->n_needles, 0);
+      // if has initial traj, then just use that T
+      if (this->use_init_traj)
+      {
+        for (int i = 0; i < n_needles; ++i)
+          this->Ts.push_back(trajs[i].size() - 1);
+      }
+      else
+      {
+        for (int i = 0; i < n_needles; ++i)
+          this->Ts.push_back(T);
+      }
+
+      cout << this->n_needles << endl;
+      for (int i = 0; i < n_needles; ++i)
+      {
+        cout << this->Ts[i] << " " << this->init_controls[i].size() << " " << this->init_trajs[i].size() << endl;
+      }
+
     }
 
-
-    for (int i = 0; i < n_needles; ++i) {
-      this->Ts.push_back(T);
-    }
 
     if (!(entry_position_error_relax_x.size() == entry_position_error_relax_y.size() && entry_position_error_relax_y.size() == entry_position_error_relax_z.size())) {
       throw std::runtime_error("entry position error relaxes must have the same size.");
@@ -281,28 +334,38 @@ namespace Needle {
     vector<VectorXd> sols = initial;
     vector<VectorXd> prevsols = initial;
     vector< vector<Vector6d> > states;
-    for (int i = 0; i < n_needles; ++i) {
+    for (int i = 0; i < n_needles; ++i)
+    {
       states.push_back(vector<Vector6d>());
     }
-    if (sols.size() == 0) {
-      for (int i = 0; i < n_needles; ++i) {
+
+    if (sols.size() == 0)
+    {
+      for (int i = 0; i < n_needles; ++i)
+      {
         sols.push_back(VectorXd::Zero(0));
       }
     }
+
     bool all_converged = false;
     vector<bool> prev_converged(n_needles, true);
     int sequential_solves = 0;
-    if (this->is_first_needle_run && (this->separate_planning_first || !this->simultaneous_planning)) {
-      while (!all_converged && sequential_solves++ < max_sequential_solves) {
-        cout << sequential_solves << endl;
+    if (this->is_first_needle_run && (this->separate_planning_first || !this->simultaneous_planning))
+    {
+      while (!all_converged && sequential_solves++ < max_sequential_solves)
+      {
         ++this->n_multi_iterations;
         all_converged = true;
-        for (int i = 0; i < n_needles; ++i) {
+
+        for (int i = 0; i < n_needles; ++i)
+        {
+          cout << "index " << i << endl;
           trajopt::SetUserData(*this->env, "trajopt_cc", OpenRAVE::UserDataPtr());
           this->managed_kinbodies.clear();
           
           helper->InitParametersFromConsole(this->argc, this->argv);
-          if (current_sim_index > 0 && this->use_colocation_correction) {
+          if (current_sim_index > 0 && this->use_colocation_correction)
+          {
             // use colocation whenever sim index > 0 
             helper->method = NeedleProblemHelper::Colocation;
           }
@@ -327,46 +390,43 @@ namespace Needle {
             helper->entry_orientation_error_relax.front() = 0;
           }
           */
-          for (int j = 0; j < states.size(); ++j) {
-            if (i != j){// && prev_converged[j]) {
+
+          for (int j = 0; j < states.size(); ++j)
+          {
+            if (i != j) // && prev_converged[j])
+            {
               this->AddSimulatedNeedleToBullet(states[j]);
             }
           }
+
+
           OptProbPtr prob(new OptProb());
           helper->ConfigureProblem(*prob);
           OptimizerT opt(prob);
           helper->ConfigureOptimizer(opt);
 
           // perturbation in sequential attempt
-          if (sols[i].size() > 0) {
+          if (sols[i].size() > 0)
+          {
             vector<VectorXd> subinitial;
             subinitial.push_back(sols[i]);
 
-            /*
-            for (int j = 0; j < subinitial[0].size(); ++j) {
-              if (!prev_converged[i]) {
-                if (this->channel_planning) subinitial[0](j) += normal() * 0.02; // the environment is less delicate, allowing for more noise
-                else subinitial[0](j) += normal() * 0.05;
-              }
-            }
-
-            */
             if (!prev_converged[i])
-            {
               subinitial[0] = PerturbSolution(subinitial[0]);
-            }
-
 
             helper->SetSolutions(subinitial, opt);
           }
 
 
-          if (this->stage_plotting || this->stage_result_plotting) {
+          if (this->stage_plotting || this->stage_result_plotting)
+          {
             this->plotter.reset(new Needle::TrajPlotter());
           }
-          if (this->stage_plotting) {
+          if (this->stage_plotting)
+          {
             opt.addCallback(boost::bind(&Needle::TrajPlotter::OptimizerCallback, boost::ref(this->plotter), _1, _2, helper, shared_from_this(), true, vector< vector<Vector6d> >()));
           }
+
 
           OptStatus status = opt.optimize();
           if (status != OPT_CONVERGED) {
@@ -377,22 +437,31 @@ namespace Needle {
           }
 
           prev_converged[i] = status == OPT_CONVERGED;
-          for (int j = 0; j < helper->robots.size(); ++j) {
+          for (int j = 0; j < helper->robots.size(); ++j)
+          {
             robots.push_back(helper->robots[j]);
           }
+
+
           sols[i] = helper->GetSolutions(opt).front();
-          if (this->seq_result_plotting || (this->stage_result_plotting && i == n_needles - 1 && (all_converged || (sequential_solves+1 >= max_sequential_solves)) && !(this->simultaneous_planning))) {
+
+
+          if (this->seq_result_plotting || (this->stage_result_plotting && i == n_needles - 1 && (all_converged || (sequential_solves+1 >= max_sequential_solves)) && !(this->simultaneous_planning)))
+          {
             vector< vector<Vector6d> > plot_states;
-            for (int j = 0; j < states.size(); ++j) {
-              if (i != j) {
+            for (int j = 0; j < states.size(); ++j)
+            {
+              if (i != j)
                 plot_states.push_back(states[j]);
-              }
             }
             this->plotter->OptimizerCallback(prob.get(), opt.x(), this->helper, shared_from_this(), true, plot_states);
           }
+
           states[i] = helper->GetStates(opt).front();
         }
-        if (this->simultaneous_planning) {
+
+        if (this->simultaneous_planning)
+        {
           break;
         }
       }
@@ -400,15 +469,11 @@ namespace Needle {
 
     current_converged = all_converged;
 
-    if (this->channel_planning && !this->simultaneous_planning) {
-      return sols;
-    }
+//    if (this->channel_planning && !this->simultaneous_planning) {
+//      return sols;
+//    }
 
-
-
-
-
-
+    // simultaneous_planning
 
     trajopt::SetUserData(*env, "trajopt_cc", OpenRAVE::UserDataPtr());
     helper->InitParametersFromConsole(this->argc, this->argv);
@@ -419,6 +484,8 @@ namespace Needle {
     helper->n_needles = this->n_needles;
     helper->entries = this->entries;
     helper->finals = this->finals;
+    helper->init_trajs = this->init_trajs;
+    helper->init_controls = this->init_controls;
     helper->entry_position_error_relax = this->entry_position_error_relax;
     helper->entry_orientation_error_relax = this->entry_orientation_error_relax;
     helper->final_distance_error_relax = this->final_distance_error_relax;
@@ -449,25 +516,29 @@ namespace Needle {
     OptimizerT opt(prob);
     helper->ConfigureOptimizer(opt);
 
-    if (this->is_first_needle_run && (this->separate_planning_first || !this->simultaneous_planning)) {
+
+
+    if (this->is_first_needle_run && (this->separate_planning_first || !this->simultaneous_planning))
+    {
       helper->SetSolutions(sols, opt);
-    } else {
-      if (initial.size() == helper->n_needles) {
+    }
+    else
+    {
+      if (initial.size() == helper->n_needles)
+      {
         helper->SetSolutions(initial, opt);
-      } else {
+      }
+      else
+      {
         vector<VectorXd> cursols = helper->GetSolutions(opt);
-        for (int i = 0; i < cursols.size(); ++i) {
-          for (int j = 0; j < cursols[i].size(); ++j) {
-            cursols[i](j) += normal() * 0.05;
-          }
+        for (int i = 0; i < cursols.size(); ++i)
+        {
+          cursols[i] = PerturbSolution(cursols[i]);
         }
         helper->SetSolutions(cursols, opt);
       }
     }
 
-    //if (!this->is_first_needle_run) {
-    //  helper->IntegrateControls(opt.x());
-    //}
 
     if (this->stage_plotting || this->stage_result_plotting) {
       this->plotter.reset(new Needle::TrajPlotter());
@@ -476,8 +547,8 @@ namespace Needle {
       opt.addCallback(boost::bind(&Needle::TrajPlotter::OptimizerCallback, boost::ref(this->plotter), _1, _2, helper, shared_from_this(), true, vector< vector<Vector6d> >()));
     }
 
+
     if (this->simultaneous_planning || !this->is_first_needle_run) {
-      //helper->IntegrateControls(opt.x());
       OptStatus status = opt.optimize();
       if (this->stage_result_plotting) {
         this->plotter->OptimizerCallback(prob.get(), this->x, this->helper, shared_from_this(), true, vector< vector<Vector6d> >());
@@ -485,10 +556,6 @@ namespace Needle {
       sols = helper->GetSolutions(opt);
       current_converged = status == OPT_CONVERGED;
     }
-
-    //if (!current_converged && prevsols.size() > 0) {
-    //  helper->SetSolutions(prevsols, opt);
-    //}
 
     this->x = opt.x();
 
@@ -503,29 +570,55 @@ namespace Needle {
     NeedleProblemInstancePtr pi = this->helper->pis[0];
     std::size_t T = pi->T;
 
-    double perturb_twist = 0.2;
-    double perturb_phi = 0.1;
-    double perturb_curvature = 0.1;
+    int offset = 0;
 
-    // perturb twist (except the final one)
+    double perturb_twist = 0.01;
+    double perturb_phi = 0.02;
+    double perturb_curvature = 0.02;
+
+
     for (int i = 1; i <= T; ++i)
+    {
+      for (int j = 0; j < 6; ++j)
+      {
+        perturbed_sol[offset + 6 * i + j] += (2 * rndnum() - 1) * perturb_twist;
+      }
+    }
+
+    offset += 6 * (T+1);
+
+    // perturb twist
+    for (int i = 0; i < T; ++i)
     {
       VarVector vars = pi->twistvars.row(i);
       for (int j = 0; j < vars.size(); ++j)
       {
-        int index = vars[j].var_rep->index;
+        int index = offset + i * vars.size() + j;
         perturbed_sol[index] += (2 * rndnum() - 1) * perturb_twist;
       }
     }
 
+    offset += pi->twistvars.size();
+
     for (int i = 0; i < T; ++i)
     {
-      int phi_index, curvature_index;
-      phi_index = pi->phivars.row(i)[0].var_rep->index;
-      curvature_index = pi->curvature_vars.row(i)[0].var_rep->index;
-      perturbed_sol[phi_index] += (2 * rndnum() - 1) * perturb_phi;
-      perturbed_sol[curvature_index] += (2 * rndnum() - 1) * perturb_curvature;
+      int index = offset + i;
+      perturbed_sol[index] += (2 * rndnum() - 1) * perturb_phi;
     }
+
+    offset += pi->phivars.size();
+
+    offset += 1;
+
+    for (int i = 0; i < T; ++i)
+    {
+      int index = offset + i;
+      perturbed_sol[index] += (2 * rndnum() - 1) * perturb_curvature;
+    }
+
+    offset += pi->curvature_vars.size();
+
+    // cout << offset << " " << sol.size() << endl;
 
     return perturbed_sol;
   }
@@ -542,8 +635,6 @@ namespace Needle {
   }
 
   void NeedleProblemPlanner::SimulateExecution() {
-
-    
     double phi = helper->GetPhi(this->x, current_open_sim_index, helper->pis.front());
     double Delta = helper->GetDelta(this->x, current_open_sim_index, helper->pis.front());
     double curvature = helper->GetCurvature(this->x, current_open_sim_index, helper->pis.front());

@@ -35,6 +35,8 @@ namespace Needle {
     string robot_file_path;
     string init_traj_path;
 
+    double rotation_axis_index; // index of rotation axis of channel (0 --> around 0'th channel's center)
+
     EnvironmentBasePtr env;
     boost::shared_ptr<TrajPlotter> plotter;
 

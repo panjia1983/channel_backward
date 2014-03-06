@@ -46,6 +46,7 @@ namespace Needle {
 
     double total_curvature_limit;
     double total_rotation_limit;
+    double rotation_bound;
 
     double channel_radius;
     double channel_height;
@@ -81,23 +82,20 @@ namespace Needle {
     void InitTrajectory(OptProb& prob, NeedleProblemInstancePtr pi);
     void AddRotationCost(OptProb& prob, NeedleProblemInstancePtr pi);
     void AddCurvatureCost(OptProb& prob, NeedleProblemInstancePtr pi);
+    void AddRotationConstraint(OptProb& prob, NeedleProblemInstancePtr pi);
+    void AddCurvatureConstraint(OptProb& prob, NeedleProblemInstancePtr helper);
+
+
     void AddSpeedCost(OptProb& prob, NeedleProblemInstancePtr pi);
     void AddEntryConstraint(OptProb& prob, NeedleProblemInstancePtr pi);
-    void AddFinalConstraint(OptProb& prob, NeedleProblemInstancePtr pi);
     void AddChannelConstraint(OptProb& prob, NeedleProblemInstancePtr pi);
-    void AddTotalCurvatureConstraint(OptProb& prob, NeedleProblemInstancePtr helper);
-    void AddTotalCurvatureCost(OptProb& prob, NeedleProblemInstancePtr helper);
-    void AddTwistConstraint(OptProb& prob, NeedleProblemInstancePtr pi);
     void AddControlConstraint(OptProb& prob, NeedleProblemInstancePtr pi);
     void AddLinearizedControlConstraint(OptProb& prob, NeedleProblemInstancePtr pi);
-    void AddTotalRotationConstraint(OptProb& prob, NeedleProblemInstancePtr pi);
     void AddCollisionConstraint(OptProb& prob, NeedleProblemInstancePtr pi);
     void AddSelfCollisionConstraint(OptProb& prob, NeedleProblemInstancePtr piA, NeedleProblemInstancePtr piB);
     void AddCollisionClearanceCost(OptProb& prob);
     void InitializeCollisionEnvironment();
 
-
-    void AddPoseConstraint(OptProb& prob, NeedleProblemInstancePtr pi);
 
 
     Matrix4d TransformPose(const Matrix4d& pose, double phi, double Delta, double radius) const;
@@ -109,6 +107,8 @@ namespace Needle {
     vector< vector<Vector6d> > GetStates(OptimizerT& opt);
     void SetSolutions(const vector<VectorXd>& sol, OptimizerT& opt);
     void IntegrateControls(DblVec& x);
+    void IntegrateControls(DblVec& x, size_t i);
+
 
     void AddNeedlesToBullet(OptimizerT& prob);
     void AddNeedleToBullet(NeedleProblemInstancePtr pi, OptimizerT& prob);

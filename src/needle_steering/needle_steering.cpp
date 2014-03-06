@@ -95,7 +95,8 @@ int main(int argc, char** argv) {
   }
   cout << "elapsed time: " << util::GetClock() << endl;
 
-  if (first_run_only) {
+  if (first_run_only)
+  {
     trajopt::SetUserData(*planner->env, "trajopt_cc", OpenRAVE::UserDataPtr());
     NeedleProblemHelperPtr helper = planner->helper;
     helper->InitParametersFromConsole(argc, argv); 

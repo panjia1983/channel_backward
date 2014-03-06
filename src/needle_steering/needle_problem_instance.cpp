@@ -28,8 +28,9 @@ namespace Needle {
   vector<Vector6d> NeedleProblemInstance::GetStates(OptimizerT& opt) {
     DblVec& x = opt.x(); 
     vector<Vector6d> ret;
-    for (int i = 0; i < local_configs.size(); ++i) {
-      ret.push_back(logDown(local_configs[i]->pose * expUp(getVec(x, twistvars.row(i)))));
+    ret.push_back(logDown(local_configs[0]->pose));
+    for (int i = 1; i < local_configs.size(); ++i) {
+      ret.push_back(logDown(local_configs[i]->pose * expUp(getVec(x, twistvars.row(i-1)))));
     }
     return ret;
   }
