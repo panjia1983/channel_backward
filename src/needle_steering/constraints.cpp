@@ -189,27 +189,6 @@ namespace Needle {
     return 6;
   }
 
-
-  ChannelSurfaceDistance::ChannelSurfaceDistance(LocalConfigurationPtr cfg, NeedleProblemHelperPtr helper) : cfg(cfg), helper(helper) {} 
-
-  VectorXd ChannelSurfaceDistance::operator()(const VectorXd& a) const {
-    Matrix4d current_pose = cfg->pose * expUp(a);
-    Vector3d position = current_pose.block<3, 1>(0, 3);
-    double x = position.x(), y = position.y(), z = position.z();
-    if (z > helper->channel_height) {
-      double distance_error = x*x+y*y+(z-helper->channel_height)*(z-helper->channel_height) - (helper->channel_radius-0.2)*(helper->channel_radius-0.2);
-      VectorXd ret(3); ret << distance_error, 0, 0;
-      return ret;
-    } else {
-      double xyerror = x*x+y*y - (helper->channel_radius-0.2)*(helper->channel_radius-0.2);
-      double zerror1 = z - helper->channel_height;
-      double zerror2 = -0.2 - z;
-      VectorXd ret(3); ret << xyerror, zerror1, zerror2;
-      return ret;
-    }
-    
-  }
-
   CurvatureError::CurvatureError(double total_curvature_limit, NeedleProblemHelperPtr helper, NeedleProblemInstancePtr pi) : total_curvature_limit(total_curvature_limit), helper(helper), pi(pi) {}
 
   VectorXd CurvatureError::operator()(const VectorXd& a) const {
@@ -241,7 +220,7 @@ namespace Needle {
   }
 
 
-  CurvatureCost::CurvatureCost(NeedleProblemHelperPtr helper, NeedleProblemInstancePtr pi) : helper(helper), pi(pi) {}
+  CurvatureCost::CurvatureCost(double coeff, NeedleProblemHelperPtr helper, NeedleProblemInstancePtr pi) : coeff(coeff), helper(helper), pi(pi) {}
 
   double CurvatureCost::operator()(const VectorXd& a) const {
     DblVec curvatures;
@@ -249,32 +228,53 @@ namespace Needle {
     curvatures = toDblVec(a.head(pi->curvature_vars.size()));
     Deltas = DblVec(pi->curvature_vars.size(), a(a.size() - 1));
     double ret = 0;
-    for (int i = 0; i < curvatures.size(); ++i) {
+    for (int i = 0; i < curvatures.size(); ++i)
+    {
       double tmp = curvatures[i] * Deltas[i];
       ret += tmp * tmp;
     }
-    return ret;
+    return ret * coeff;
   }
 
 
-  TwistError::TwistError(double twist_translation_limit, double twist_rotation_limit, NeedleProblemHelperPtr helper, NeedleProblemInstancePtr pi) : twist_translation_limit(twist_translation_limit), twist_rotation_limit(twist_rotation_limit), helper(helper), pi(pi) {}
+  CurvatureContinuityCost::CurvatureContinuityCost(double coeff, NeedleProblemHelperPtr helper, NeedleProblemInstancePtr pi) : coeff(coeff), helper(helper), pi(pi) {}
 
-  VectorXd TwistError::operator()(const VectorXd& a) const {
-    VectorXd twist_err(4);
+  double CurvatureContinuityCost::operator()(const VectorXd& a) const {
+    DblVec curvatures;
+    DblVec Deltas;
+    curvatures = toDblVec(a.head(pi->curvature_vars.size()));
+    Deltas = DblVec(pi->curvature_vars.size(), a(a.size() - 1));
+    double ret = 0;
+    for (int i = 1; i < curvatures.size(); ++i)
+    {
+      double tmp = (fabs(curvatures[i]) - fabs(curvatures[i-1])) * Deltas[i];
+      ret += tmp * tmp;
+    }
 
-    twist_err(0) = fabs(a(0)) - this->twist_translation_limit;
-    twist_err(1) = fabs(a(1)) - this->twist_translation_limit;
-    twist_err(2) = fabs(a(2)) - this->twist_translation_limit;
-
-    Vector3d axisangle(a(3), a(4), a(5));
-    double angle = axisangle.norm();
-
-    twist_err(3) = angle - this->twist_rotation_limit;
-
-    return twist_err;
+    return ret * coeff;
   }
 
-  int TwistError::outputSize() const {
-    return 4;
+
+  ChannelSurfaceDistance::ChannelSurfaceDistance(LocalConfigurationPtr cfg, NeedleProblemHelperPtr helper) : cfg(cfg), helper(helper) {}
+
+  VectorXd ChannelSurfaceDistance::operator()(const VectorXd& a) const {
+    Matrix4d current_pose = cfg->pose * expUp(a);
+    Vector3d position = current_pose.block<3, 1>(0, 3);
+    double x = position.x(), y = position.y(), z = position.z();
+    if (z > helper->channel_height) {
+      double distance_error = x*x+y*y+(z-helper->channel_height)*(z-helper->channel_height) - (helper->channel_radius-0.2)*(helper->channel_radius-0.2);
+      VectorXd ret(3); ret << distance_error, 0, 0;
+      return ret;
+    } else {
+      double xyerror = x*x+y*y - (helper->channel_radius-0.2)*(helper->channel_radius-0.2);
+      double zerror1 = z - helper->channel_height;
+      double zerror2 = -0.2 - z;
+      VectorXd ret(3); ret << xyerror, zerror1, zerror2;
+      return ret;
+    }
+
   }
+
+
+
 }

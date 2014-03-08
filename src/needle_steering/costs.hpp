@@ -43,6 +43,31 @@ namespace Needle {
   };
 
 
+  class RotationContinuityQuadraticCost : public Cost {
+  public:
+    RotationContinuityQuadraticCost(const VarVector& vars, double coeff, NeedleProblemHelperPtr helper);
+    virtual double value(const vector<double>& xvec, Model* model);
+    virtual ConvexObjectivePtr convex(const vector<double>& xvec);
+  private:
+    VarVector vars;
+    double coeff;
+    QuadExpr expr;
+    NeedleProblemHelperPtr helper;
+  };
+
+  class RotationContinuityL1Cost : public Cost {
+  public:
+    RotationContinuityL1Cost(const VarVector& vars, double coeff, NeedleProblemHelperPtr helper);
+    virtual double value(const vector<double>& xvec, Model* model);
+    virtual ConvexObjectivePtr convex(const vector<double>& xvec);
+  private:
+    VarVector vars;
+    double coeff;
+    AffExpr expr;
+    NeedleProblemHelperPtr helper;
+  };
+
+
   struct NeedleCollisionClearanceCost : public Cost {
     NeedleCollisionClearanceCost(NeedleProblemHelperPtr helper, double coeff);
     ConvexObjectivePtr convex(const vector<double>& x);

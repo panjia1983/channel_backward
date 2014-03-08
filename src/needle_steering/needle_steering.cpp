@@ -86,7 +86,6 @@ int main(int argc, char** argv) {
     if (first_run_only) break;
     while (!planner->Finished()) {
       sols = planner->GetSolutionsWithoutFirstTimestep(sols);
-      planner->SimulateExecution();
       if (sim_plotting) {
         sim_plotter->Plot(planner);
       }

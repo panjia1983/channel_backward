@@ -25,6 +25,22 @@ namespace Needle {
     }
   }
 
+  void NeedleProblemHelper::AddRotationContinuityCost(OptProb& prob, NeedleProblemInstancePtr pi) {
+    switch (rotation_cost) {
+      case UseRotationQuadraticCost: {
+        prob.addCost(CostPtr(new RotationContinuityQuadraticCost(pi->phivars.col(0), coeff_rotation_continuity, shared_from_this())));
+        this->rotation_costs.push_back(prob.getCosts().back());
+        break;
+      }
+      case UseRotationL1Cost: {
+        prob.addCost(CostPtr(new RotationContinuityL1Cost(pi->phivars.col(0), coeff_rotation_continuity_regularization, shared_from_this())));
+        this->rotation_costs.push_back(prob.getCosts().back());
+        break;
+      }
+      SWITCH_DEFAULT;
+    }
+  }
+
   void NeedleProblemHelper::AddSpeedCost(OptProb& prob, NeedleProblemInstancePtr pi) {
     prob.addCost(CostPtr(new ConstantSpeedCost(pi->Deltavar, coeff_speed, shared_from_this(), pi)));
     this->speed_costs.push_back(prob.getCosts().back());
@@ -46,18 +62,33 @@ namespace Needle {
       pi->entry_orientation_error_relax = this->entry_orientation_error_relax[i];
       pi->final_distance_error_relax = this->final_distance_error_relax[i];
 
+      cout << "needle " << i << " relax" << endl;
+      cout << pi->entry_position_error_relax.transpose() << endl;
+      cout << pi->entry_orientation_error_relax << endl;
+      cout << "needle " << i << " relax end" << endl;
+
       CreateVariables(prob, pi);
       InitLocalConfigurations(this->robots[i], prob, pi);
       InitTrajectory(prob, pi);
       AddRotationCost(prob, pi);
-      AddCurvatureCost(prob, pi); //without Delta weight
+      AddCurvatureCost(prob, pi);
+
       //AddSpeedCost(prob, pi); //not important I guess
+
       AddEntryConstraint(prob, pi);
 
-      if (this->channel_planning) {
-        //AddChannelConstraint(prob, pi);
+      if (this->channel_planning)
+      {
         AddCurvatureConstraint(prob, pi);
         AddRotationConstraint(prob, pi);
+        AddChannelConstraint(prob, pi);
+
+        if (this->channel_continuity)
+        {
+          AddCurvatureContinuityCost(prob, pi);
+          AddRotationContinuityCost(prob, pi);
+        }
+
       }
 
       AddControlConstraint(prob, pi);
@@ -79,16 +110,6 @@ namespace Needle {
     InitializeCollisionEnvironment();
   }
 
-  void NeedleProblemHelper::AddChannelConstraint(OptProb& prob, NeedleProblemInstancePtr pi) {
-    for (int i = 1; i < pi->local_configs.size(); ++i) {
-      VarVector vars = pi->twistvars.row(i-1);
-      VectorOfVectorPtr f(new Needle::ChannelSurfaceDistance(pi->local_configs[i], shared_from_this()));
-      VectorXd coeffs(3); coeffs << 1., 1., 1.;
-      prob.addConstraint(ConstraintPtr(new ConstraintFromFunc(f, vars, coeffs, INEQ, (boost::format("channel_surface_distance_collision_%i")%i).str())));
-      pi->dynamics_constraints.push_back(prob.getConstraints().back());
-    }
-  }
-
   void NeedleProblemHelper::AddCurvatureConstraint(OptProb& prob, NeedleProblemInstancePtr pi) {
     VectorOfVectorPtr f(new Needle::CurvatureError(this->total_curvature_limit, shared_from_this(), pi));
     VectorXd coeffs(1); coeffs << 1.;
@@ -106,10 +127,17 @@ namespace Needle {
   }
 
   void NeedleProblemHelper::AddCurvatureCost(OptProb& prob, NeedleProblemInstancePtr pi) {
-    ScalarOfVectorPtr f(new Needle::CurvatureCost(shared_from_this(), pi));
+    ScalarOfVectorPtr f(new Needle::CurvatureCost(coeff_curvature, shared_from_this(), pi));
     VarVector vars = pi->curvature_vars.flatten();
     vars = concat(vars, singleton<Var>(pi->Deltavar));
     prob.addCost(CostPtr(new CostFromFunc(f, vars, (boost::format("curvature_cost_%i")%pi->id).str())));
+  }
+
+  void NeedleProblemHelper::AddCurvatureContinuityCost(OptProb& prob, NeedleProblemInstancePtr pi) {
+    ScalarOfVectorPtr f(new Needle::CurvatureContinuityCost(coeff_curvature_continuity, shared_from_this(), pi));
+    VarVector vars = pi->curvature_vars.flatten();
+    vars = concat(vars, singleton<Var>(pi->Deltavar));
+    prob.addCost(CostPtr(new CostFromFunc(f, vars, (boost::format("curvature_continuity_cost_%i")%pi->id).str())));
   }
 
 
@@ -134,25 +162,23 @@ namespace Needle {
         if (this->use_init_traj)
         {
           // Initialize phivars
+          /*
           cout << pi->init_control.size();
           cout << pi->T << endl;
           cout << pi->local_configs.size() << endl;
+          */
 
           for (int i = 0; i < pi->T; ++i)
           {
-            cout << i << " " << pi->init_control[i].size() << endl;
             pi->initVec.push_back(pi->init_control[i](2));
           }
 
-          cout << "here1" << endl;
           // Initialize Delta
           pi->initVec.push_back(pi->init_control[0](0));
-          cout << "here2" << endl;
 
           // Initialize time frame curvature
           for (int i = 0; i < pi->T; ++i)
             pi->initVec.push_back(pi->init_control[i](1));
-          cout << "here3" << endl;
 
 
           for (int i = 0; i < pi->T; ++i)
@@ -161,9 +187,6 @@ namespace Needle {
             pi->local_configs[i]->Delta = pi->init_control[0](0);
             pi->local_configs[i]->curvature = pi->init_control[i](1);
           }
-
-          cout << "here4" << endl;
-
         }
         else
         {
@@ -219,6 +242,7 @@ namespace Needle {
             pis[i]->local_configs[j]->pose = pis[i]->local_configs[j]->pose * expUp(twistvals.row(j-1));
           }
 
+          cout << pis[i]->T+1 << endl;
           for (int j = 0; j < pis[i]->T; ++j)
           {
             double phi = GetPhi(x, j, pis[i]);
@@ -230,6 +254,7 @@ namespace Needle {
 
             cout << Delta << " " << curvature << " " << phi << endl;
           }
+          cout << endl;
 
           setVec(x, pis[i]->twistvars.m_data, DblVec(pis[i]->twistvars.size(), 0));
 
@@ -243,6 +268,7 @@ namespace Needle {
 
           pis[i]->local_configs[0]->pose = expUp(pis[i]->final);
 
+          cout << pis[i]->T+1 << endl;
           for (int j = 1; j <= pis[i]->T; ++j) {
             double phi = GetPhi(x, j-1, pis[i]);
             double Delta = GetDelta(x, j-1, pis[i]);
@@ -253,8 +279,9 @@ namespace Needle {
 
             cout << Delta << " " << curvature << " " << phi << endl;
             pis[i]->local_configs[j]->pose = TransformPose(pis[i]->local_configs[j-1]->pose, phi, Delta, curvature);
-
           }
+          cout << endl;
+
           setVec(x, pis[i]->twistvars.m_data, DblVec(pis[i]->twistvars.size(), 0));
         }
         return true; // should_recompute = true: needs to recompute cnts and costs
@@ -264,7 +291,7 @@ namespace Needle {
   }
 
   void NeedleProblemHelper::ConfigureOptimizer(OptimizerT& opt) {
-    opt.max_iter_ = 100;    
+    opt.max_iter_ = this->max_iter;
     opt.improve_ratio_threshold_ = this->improve_ratio_threshold;
     opt.trust_shrink_ratio_ = this->trust_shrink_ratio;
     opt.trust_expand_ratio_ = this->trust_expand_ratio;
@@ -272,6 +299,7 @@ namespace Needle {
     opt.record_trust_region_history_ = this->record_trust_region_history;
     opt.max_merit_coeff_increases_ = this->max_merit_coeff_increases;
     opt.merit_error_coeff_ = this->merit_error_coeff;
+    opt.cnt_tolerance_ = this->cnt_tolerance;
 
     InitOptimizeVariables(opt);
 
@@ -313,40 +341,44 @@ namespace Needle {
     }
   }
 
+
+  void NeedleProblemHelper::AddChannelConstraint(OptProb& prob, NeedleProblemInstancePtr pi) {
+    for (int i = 1; i < pi->local_configs.size(); ++i) {
+      VarVector vars = pi->twistvars.row(i-1);
+      VectorOfVectorPtr f(new Needle::ChannelSurfaceDistance(pi->local_configs[i], shared_from_this()));
+      VectorXd coeffs(3); coeffs << 1., 1., 1.;
+      prob.addConstraint(ConstraintPtr(new ConstraintFromFunc(f, vars, coeffs, INEQ, (boost::format("channel_surface_distance_collision_%i")%i).str())));
+      pi->dynamics_constraints.push_back(prob.getConstraints().back());
+    }
+  }
+
+
   void NeedleProblemHelper::AddEntryConstraint(OptProb& prob, NeedleProblemInstancePtr pi) {
     VarVector vars = pi->twistvars.row(pi->T-1);
 
-    if (pi->entry_position_error_relax.norm() > 1e-4 || pi->entry_orientation_error_relax > 1e-4)
+
+    VectorOfVectorPtr f_orientation;
+    VectorOfVectorPtr f_translation;
+    VectorXd coeffs_orientation;
+    VectorXd coeffs_translation;
+
+
     {
-      VectorOfVectorPtr f_orientation;
-      VectorOfVectorPtr f_translation;
-      VectorXd coeffs_orientation;
-      VectorXd coeffs_translation;
-
-
-      {
-        f_orientation.reset(new Needle::CircleOrientationError(pi->local_configs[pi->T], pi->entry, pi->entry_orientation_error_relax, shared_from_this()));
-        f_translation.reset(new Needle::TranslationError(pi->local_configs[pi->T], pi->entry, pi->entry_position_error_relax, shared_from_this()));
-        coeffs_orientation = VectorXd(1);
-        coeffs_translation = VectorXd(3);
-      }
-
-      coeffs_orientation << 10;
-      coeffs_translation << 1, 1, 1;
-
-      prob.addConstraint(ConstraintPtr(new ConstraintFromFunc(f_orientation, vars, coeffs_orientation, INEQ, "entry_orientation")));
-      pi->dynamics_constraints.push_back(prob.getConstraints().back());
-      prob.addConstraint(ConstraintPtr(new ConstraintFromFunc(f_translation, vars, coeffs_translation, INEQ, "entry_translation")));
-      pi->dynamics_constraints.push_back(prob.getConstraints().back());
-
+      f_orientation.reset(new Needle::CircleOrientationError(pi->local_configs[pi->T], pi->entry, pi->entry_orientation_error_relax, shared_from_this()));
+      f_translation.reset(new Needle::TranslationError(pi->local_configs[pi->T], pi->entry, pi->entry_position_error_relax, shared_from_this()));
+      coeffs_orientation = VectorXd(1);
+      coeffs_translation = VectorXd(3);
     }
-    else
-    {
-      VectorOfVectorPtr f(new Needle::ExactPositionError(pi->local_configs[pi->T], pi->entry, shared_from_this()));
-      Vector6d coeffs; coeffs << 1., 1., 1., 1., 1., 1.;
-      prob.addConstraint(ConstraintPtr(new ConstraintFromFunc(f, vars, coeffs, EQ, "entry")));
-      pi->dynamics_constraints.push_back(prob.getConstraints().back());
-    }
+
+    coeffs_orientation << 10;
+    coeffs_translation << 1, 1, 1;
+
+    prob.addConstraint(ConstraintPtr(new ConstraintFromFunc(f_orientation, vars, coeffs_orientation, INEQ, "entry_orientation")));
+    pi->dynamics_constraints.push_back(prob.getConstraints().back());
+    prob.addConstraint(ConstraintPtr(new ConstraintFromFunc(f_translation, vars, coeffs_translation, INEQ, "entry_translation")));
+    pi->dynamics_constraints.push_back(prob.getConstraints().back());
+
+
 
   }
 
@@ -409,23 +441,19 @@ namespace Needle {
 
 
   void NeedleProblemHelper::AddCollisionConstraint(OptProb& prob, NeedleProblemInstancePtr pi) {
-    if (continuous_collision) {
-      for (int i = 0; i < pi->T; ++i) {
-        if (i > 0)
-        {
-          prob.addConstraint(ConstraintPtr(new CollisionConstraint(collision_dist_pen, collision_coeff, pi->local_configs[i], pi->local_configs[i+1], pi->twistvars.row(i-1), pi->twistvars.row(i))));
-        }
-        else
-        {
-          prob.addConstraint(ConstraintPtr(new CollisionConstraint(collision_dist_pen, collision_coeff, pi->local_configs[i], pi->local_configs[i+1], vector<Var>(), pi->twistvars.row(i))));
-        }
+    if (continuous_collision) // the first links are ignored, as CollisionConstraint has no support for static objects.
+    {
+      for (int i = 1; i < pi->T; ++i)
+      {
+        prob.addConstraint(ConstraintPtr(new CollisionConstraint(collision_dist_pen, collision_coeff, pi->local_configs[i], pi->local_configs[i+1], pi->twistvars.row(i-1), pi->twistvars.row(i))));
         pi->collision_constraints.push_back(prob.getConstraints().back());
         prob.getConstraints().back()->setName((boost::format("collision_obstacle_%i (needle %i)")%i%pi->id).str());
       }
     }
     else
     {
-      for (int i = 1; i <= pi->T; ++i) {
+      for (int i = 1; i <= pi->T; ++i)
+      {
         prob.addConstraint(ConstraintPtr(new CollisionConstraint(collision_dist_pen, collision_coeff, pi->local_configs[i], pi->local_configs[i], pi->twistvars.row(i-1), pi->twistvars.row(i-1))));
         pi->collision_constraints.push_back(prob.getConstraints().back());
         prob.getConstraints().back()->setName((boost::format("collision_obstacle_%i (needle %i)")%i%pi->id).str());
@@ -434,29 +462,13 @@ namespace Needle {
   }
 
   void NeedleProblemHelper::AddSelfCollisionConstraint(OptProb& prob, NeedleProblemInstancePtr piA, NeedleProblemInstancePtr piB) {
-    if (continuous_collision)
+    if (continuous_collision) // the first links are ignored, as CollisionConstraint has no support for static objects.
     {
-      for (int i = 0; i < piA->T; ++i)
+      for (int i = 1; i < piA->T; ++i)
       {
-        for (int j = 0; j < piB->T; ++j)
+        for (int j = 1; j < piB->T; ++j)
         {
-          if (i > 0 && j > 0)
-          {
-            prob.addConstraint(ConstraintPtr(new CollisionConstraint(collision_dist_pen, collision_coeff, piA->local_configs[i], piA->local_configs[i+1], piB->local_configs[j], piB->local_configs[j+1], piA->twistvars.row(i-1), piA->twistvars.row(i), piB->twistvars.row(j-1), piB->twistvars.row(j))));
-          }
-          else if (i > 0)
-          {
-            prob.addConstraint(ConstraintPtr(new CollisionConstraint(collision_dist_pen, collision_coeff, piA->local_configs[i], piA->local_configs[i+1], piB->local_configs[j], piB->local_configs[j+1], piA->twistvars.row(i-1), piA->twistvars.row(i), vector<Var>(), piB->twistvars.row(j))));
-          }
-          else if (j > 0)
-          {
-            prob.addConstraint(ConstraintPtr(new CollisionConstraint(collision_dist_pen, collision_coeff, piA->local_configs[i], piA->local_configs[i+1], piB->local_configs[j], piB->local_configs[j+1], vector<Var>(), piA->twistvars.row(i), piB->twistvars.row(j-1), piB->twistvars.row(j))));
-          }
-          else
-          {
-            prob.addConstraint(ConstraintPtr(new CollisionConstraint(collision_dist_pen, collision_coeff, piA->local_configs[i], piA->local_configs[i+1], piB->local_configs[j], piB->local_configs[j+1], vector<Var>(), piA->twistvars.row(i), vector<Var>(), piB->twistvars.row(j))));
-          }
-
+          prob.addConstraint(ConstraintPtr(new CollisionConstraint(collision_dist_pen, collision_coeff, piA->local_configs[i], piA->local_configs[i+1], piB->local_configs[j], piB->local_configs[j+1], piA->twistvars.row(i-1), piA->twistvars.row(i), piB->twistvars.row(j-1), piB->twistvars.row(j))));
           self_collision_constraints.push_back(prob.getConstraints().back());
           prob.getConstraints().back()->setName((boost::format("self_collision_%i_%i")%i%j).str());
         }
@@ -506,6 +518,8 @@ namespace Needle {
     this->r_min = 2;
     this->n_dof = 6;
 
+    this->max_iter = 100;
+
     this->method = NeedleProblemHelper::Colocation;
     //this->rotation_cost = NeedleProblemHelper::UseRotationQuadraticCost;
     this->rotation_cost = NeedleProblemHelper::UseRotationL1Cost;
@@ -520,12 +534,16 @@ namespace Needle {
     this->record_trust_region_history = false;
     this->merit_error_coeff = 10;
     this->max_merit_coeff_increases = 5;
+    this->cnt_tolerance = 1e-4;
 
     this->coeff_rotation = .01;
     this->coeff_curvature = .01;
-    this->coeff_speed = .01;
-    this->coeff_rotation_regularization = 0.1;
-    this->coeff_curvature_regularization = 0.1;
+    this->coeff_rotation_regularization = .01;
+    this->coeff_rotation_continuity = .001;
+    this->coeff_curvature_continuity = .001;
+    this->coeff_rotation_continuity_regularization = .001;
+
+    this->coeff_speed = 1;
     this->coeff_orientation_error = 1;
     this->collision_dist_pen = 0.05;
     this->collision_coeff = 1;
@@ -535,10 +553,11 @@ namespace Needle {
     this->total_rotation_limit = 3.14;
     this->rotation_bound = PI;
 
-    this->channel_radius = 0.25;
-    this->channel_height = 7;
+    this->channel_radius = 2.5;
+    this->channel_height = 10;
     this->channel_safety_margin = 0.25;
     this->channel_planning = true;
+    this->channel_continuity = false;
 
     const char *ignored_kinbody_c_strs[] = { "KinBodyProstate", "KinBodyDermis", "KinBodyEpidermis", "KinBodyHypodermis", "KinBodyEntryRegion", "ImplantKinBody" };
     this->ignored_kinbody_names = vector<string>(ignored_kinbody_c_strs, end(ignored_kinbody_c_strs));
@@ -549,18 +568,22 @@ namespace Needle {
     InitParameters();
     
     Config config;
+    config.add(new Parameter<int>("max_iter", &this->max_iter, "max_iter"));
     config.add(new Parameter<int>("method", &this->method, "method"));
     config.add(new Parameter<int>("rotation_cost", &this->rotation_cost, "rotation_cost"));
     config.add(new Parameter<double>("coeff_rotation_regularization", &this->coeff_rotation_regularization, "coeff_rotation_regularization"));
     config.add(new Parameter<double>("coeff_rotation", &this->coeff_rotation, "coeff_rotation"));
-    config.add(new Parameter<double>("coeff_curvature_regularization", &this->coeff_curvature_regularization, "coeff_curvature_regularization"));
-    config.add(new Parameter<double>("coeff_curvature", &this->coeff_rotation, "coeff_curvature"));
+    config.add(new Parameter<double>("coeff_curvature", &this->coeff_curvature, "coeff_curvature"));
+    config.add(new Parameter<double>("coeff_rotation_continuity_regularization", &this->coeff_rotation_continuity_regularization, "coeff_rotation_continuity_regularization"));
+    config.add(new Parameter<double>("coeff_rotation_continuity", &this->coeff_rotation_continuity, "coeff_rotation_continuity"));
+    config.add(new Parameter<double>("coeff_curvature_continuity", &this->coeff_curvature_continuity, "coeff_curvature_continuity"));
     config.add(new Parameter<double>("coeff_speed", &this->coeff_speed, "coeff_speed"));
     config.add(new Parameter<double>("coeff_orientation_error", &this->coeff_orientation_error, "coeff_orientation_error"));
     config.add(new Parameter<double>("r_min", &this->r_min, "r_min"));
     config.add(new Parameter<double>("improve_ratio_threshold", &this->improve_ratio_threshold, "improve_ratio_threshold"));
     config.add(new Parameter<double>("trust_shrink_ratio", &this->trust_shrink_ratio, "trust_shrink_ratio"));
     config.add(new Parameter<double>("trust_expand_ratio", &this->trust_expand_ratio, "trust_expand_ratio"));
+    config.add(new Parameter<double>("cnt_tolerance", &this->cnt_tolerance, "cnt_tolerance"));
     config.add(new Parameter<double>("collision_dist_pen", &this->collision_dist_pen, "collision_dist_pen"));
     config.add(new Parameter<double>("collision_coeff", &this->collision_coeff, "collision_coeff"));
     config.add(new Parameter<double>("collision_clearance_coeff", &this->collision_clearance_coeff, "collision_clearance_coeff"));
@@ -572,6 +595,7 @@ namespace Needle {
     config.add(new Parameter<bool>("record_trust_region_history", &this->record_trust_region_history, "record_trust_region_history"));
     config.add(new Parameter<bool>("continuous_collision", &this->continuous_collision, "continuous_collision"));
     config.add(new Parameter<bool>("channel_planning", &this->channel_planning, "channel_planning"));
+    config.add(new Parameter<bool>("channel_continuity", &this->channel_continuity, "channel_continuity"));
     config.add(new Parameter<double>("rotation_bound", &this->rotation_bound, "rotation_bound"));
 
     CommandParser parser(config);

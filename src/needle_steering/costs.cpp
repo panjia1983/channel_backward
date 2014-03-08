@@ -56,6 +56,57 @@ namespace Needle {
 
 
 
+
+  RotationContinuityQuadraticCost::RotationContinuityQuadraticCost(const VarVector& vars, double coeff, NeedleProblemHelperPtr helper) : Cost("RotationContinuity"), vars(vars), coeff(coeff), helper(helper)
+  {
+    for (int i = 1; i < vars.size(); ++i)
+    {
+      exprInc(expr, exprMult(exprSquare(exprSub(AffExpr(vars[i]), AffExpr(vars[i-1]))), coeff));
+    }
+  }
+
+  double RotationContinuityQuadraticCost::value(const vector<double>& xvec, Model* model) {
+    VectorXd vals = getVec(xvec, vars);
+    double ret = 0;
+    for (int i = 1; i < vals.size(); ++i)
+    {
+      ret += (vals[i] - vals[i-1]) * (vals[i] - vals[i-1]);
+    }
+
+    return ret * coeff;
+  }
+
+  ConvexObjectivePtr RotationContinuityQuadraticCost::convex(const vector<double>& xvec) {
+    ConvexObjectivePtr out(new ConvexObjective());
+    out->addQuadExpr(expr);
+    return out;
+  }
+
+
+  RotationContinuityL1Cost::RotationContinuityL1Cost(const VarVector& vars, double coeff, NeedleProblemHelperPtr helper) : Cost("RotationContinuity"), vars(vars), coeff(coeff), helper(helper) {}
+
+  double RotationContinuityL1Cost::value(const vector<double>& xvec, Model* model) {
+    VectorXd vals = getVec(xvec, vars);
+    double ret = 0;
+    for (int i = 1; i < vars.size(); ++i)
+    {
+      ret += fabs(vals[i] - vals[i-1]);
+    }
+
+    return ret * coeff;
+  }
+
+  ConvexObjectivePtr RotationContinuityL1Cost::convex(const vector<double>& xvec) {
+    ConvexObjectivePtr out(new ConvexObjective());
+    for (int i = 1; i < vars.size(); ++i)
+    {
+      out->addAbs(exprSub(AffExpr(vars[i]), AffExpr(vars[i-1])), coeff);
+    }
+    return out;
+  }
+
+
+
   NeedleCollisionClearanceCost::NeedleCollisionClearanceCost(NeedleProblemHelperPtr helper, double coeff) :
     Cost("needle_collision_clearance"),
     helper(helper),

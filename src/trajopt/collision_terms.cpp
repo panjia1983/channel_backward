@@ -248,12 +248,6 @@ void CastCollisionEvaluator::CalcCollisions(const DblVec& x, vector<Collision>& 
   DblVec dofvals0 = getDblVec(x, m_vars0);
   DblVec dofvals1 = getDblVec(x, m_vars1);
 
-  int n_dof = std::max(dofvals0.size(), dofvals1.size());
-  if (dofvals0.size() < n_dof)
-    dofvals0 = DblVec(n_dof, 0);
-  if (dofvals1.size() < n_dof)
-    dofvals1 = DblVec(n_dof, 0);
-
   m_cc->CastVsAll(*m_rad0, *m_rad1, m_links, dofvals0, dofvals1, collisions);
 }
 
@@ -262,12 +256,6 @@ void CastCollisionEvaluator::CalcDistExpressions(const DblVec& x, vector<AffExpr
   GetCollisionsCached(x, collisions);
   DblVec dofvals0 = getDblVec(x, m_vars0);
   DblVec dofvals1 = getDblVec(x, m_vars1);
-
-  int n_dof = std::max(dofvals0.size(), dofvals1.size());
-  if (dofvals0.size() < n_dof)
-    dofvals0 = DblVec(n_dof, 0);
-  if (dofvals1.size() < n_dof)
-    dofvals1 = DblVec(n_dof, 0);
 
   CollisionsToDistanceExpressions(collisions, *m_rad0, *m_rad1, m_link2ind, m_vars0, m_vars1, dofvals0, dofvals1, exprs);
 }
@@ -318,16 +306,6 @@ void CastSelfCollisionEvaluator::CalcCollisions(const DblVec& x, vector<Collisio
   DblVec dofvals10 = getDblVec(x, m_vars10);
   DblVec dofvals11 = getDblVec(x, m_vars11);
 
-  int n_dof = std::max(std::max(std::max(dofvals00.size(), dofvals01.size()), dofvals10.size()), dofvals11.size());
-  if (dofvals00.size() < n_dof)
-    dofvals00 = DblVec(n_dof, 0);
-  if (dofvals01.size() < n_dof)
-    dofvals01 = DblVec(n_dof, 0);
-  if (dofvals10.size() < n_dof)
-    dofvals10 = DblVec(n_dof, 0);
-  if (dofvals11.size() < n_dof)
-    dofvals11 = DblVec(n_dof, 0);
-
   m_cc->CastVsCast(*m_rad00, *m_rad01, *m_rad10, *m_rad11, m_links0, m_links1, dofvals00, dofvals01, dofvals10, dofvals11, collisions);
 }
 
@@ -338,16 +316,6 @@ void CastSelfCollisionEvaluator::CalcDistExpressions(const DblVec& x, vector<Aff
   DblVec dofvals01 = getDblVec(x, m_vars01);
   DblVec dofvals10 = getDblVec(x, m_vars10);
   DblVec dofvals11 = getDblVec(x, m_vars11);
-
-  int n_dof = std::max(std::max(std::max(dofvals00.size(), dofvals01.size()), dofvals10.size()), dofvals11.size());
-  if (dofvals00.size() < n_dof)
-    dofvals00 = DblVec(n_dof, 0);
-  if (dofvals01.size() < n_dof)
-    dofvals01 = DblVec(n_dof, 0);
-  if (dofvals10.size() < n_dof)
-    dofvals10 = DblVec(n_dof, 0);
-  if (dofvals11.size() < n_dof)
-    dofvals11 = DblVec(n_dof, 0);
 
   CollisionsToDistanceExpressions(collisions, *m_rad00, *m_rad01, *m_rad10, *m_rad11, m_link2ind0, m_link2ind1, m_vars00, m_vars01, m_vars10, m_vars11, dofvals00, dofvals01, dofvals10, dofvals11, exprs);
 }

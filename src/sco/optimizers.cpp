@@ -292,7 +292,12 @@ OptStatus BasicTrustRegionSQP::optimize() {
 
   DblVec& x_ = results_.x; // just so I don't have to rewrite code
   if (x_.size() == 0) PRINT_AND_THROW("you forgot to initialize!");
-  if (!prob_) PRINT_AND_THROW("you forgot to set the optimization problem");    
+  if (!prob_) PRINT_AND_THROW("you forgot to set the optimization problem");
+
+
+  // cache the latest feasible result;
+  DblVec cached_feasible_x;
+
   
   x_ = prob_->getClosestFeasiblePoint(x_);
 

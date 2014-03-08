@@ -96,13 +96,6 @@ namespace Needle {
     int outputSize() const;
   };
 
-  struct ChannelSurfaceDistance : public VectorOfVector {
-    LocalConfigurationPtr cfg;
-    NeedleProblemHelperPtr helper;
-    ChannelSurfaceDistance(LocalConfigurationPtr cfg, NeedleProblemHelperPtr helper);
-    VectorXd operator()(const VectorXd& a) const;
-  };
-
   struct CurvatureError : public VectorOfVector {
     NeedleProblemHelperPtr helper;
     NeedleProblemInstancePtr pi;
@@ -120,21 +113,26 @@ namespace Needle {
   };
 
   struct CurvatureCost : public ScalarOfVector {
+    double coeff;
     NeedleProblemHelperPtr helper;
     NeedleProblemInstancePtr pi;
-    CurvatureCost(NeedleProblemHelperPtr helper, NeedleProblemInstancePtr pi);
+    CurvatureCost(double coeff, NeedleProblemHelperPtr helper, NeedleProblemInstancePtr pi);
     double operator()(const VectorXd& a) const;
   };
 
-  struct TwistError : public VectorOfVector {
+  struct CurvatureContinuityCost : public ScalarOfVector {
+    double coeff;
     NeedleProblemHelperPtr helper;
     NeedleProblemInstancePtr pi;
-    double twist_translation_limit;
-    double twist_rotation_limit;
-    TwistError(double twist_translation_limit, double twist_rotation_limit, NeedleProblemHelperPtr helper, NeedleProblemInstancePtr pi);
-    VectorXd operator()(const VectorXd& a) const;
-    int outputSize() const;
+    CurvatureContinuityCost(double coeff, NeedleProblemHelperPtr helper, NeedleProblemInstancePtr pi);
+    double operator()(const VectorXd& a) const;
   };
 
+  struct ChannelSurfaceDistance : public VectorOfVector {
+    LocalConfigurationPtr cfg;
+    NeedleProblemHelperPtr helper;
+    ChannelSurfaceDistance(LocalConfigurationPtr cfg, NeedleProblemHelperPtr helper);
+    VectorXd operator()(const VectorXd& a) const;
+  };
 
 }

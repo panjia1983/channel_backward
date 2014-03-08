@@ -228,32 +228,6 @@ namespace Needle {
       this->distance_to_final = vector<double>(this->n_needles, 0);
 
 
-      /*
-      for (size_t i = 0; i < trajs.size(); ++i)
-      {
-        cout << "traj " << i << endl;
-        for (size_t j = 0; j < trajs[i].size(); ++j)
-        {
-          cout << trajs[i][j] << endl;
-          cout << endl;
-        }
-        cout << endl;
-      }
-
-      for (size_t i = 0; i < controls.size(); ++i)
-      {
-        cout << "control " << i << endl;
-        for (size_t j = 0; j < controls[i].size(); ++j)
-        {
-          cout << controls[i][j].transpose() << endl;
-          cout << endl;
-        }
-        cout << endl;
-      }
-
-      */
-
-
       this->entries.clear();
       this->finals.clear();
 
@@ -302,17 +276,28 @@ namespace Needle {
           this->Ts.push_back(T);
       }
 
+      /*
       cout << this->n_needles << endl;
       for (int i = 0; i < n_needles; ++i)
       {
         cout << this->Ts[i] << " " << this->init_controls[i].size() << " " << this->init_trajs[i].size() << endl;
       }
-
+      */
     }
+
+
 
 
     if (!(entry_position_error_relax_x.size() == entry_position_error_relax_y.size() && entry_position_error_relax_y.size() == entry_position_error_relax_z.size())) {
       throw std::runtime_error("entry position error relaxes must have the same size.");
+    }
+
+    // if entry_position_error_relax number is smaller than n_needles, only use the first element of entry_position_error_relax
+    if (entry_position_error_relax_x.size() < this->n_needles)
+    {
+      entry_position_error_relax_x = vector<double>(this->n_needles, entry_position_error_relax_x[0]);
+      entry_position_error_relax_y = vector<double>(this->n_needles, entry_position_error_relax_y[0]);
+      entry_position_error_relax_z = vector<double>(this->n_needles, entry_position_error_relax_z[0]);
     }
 
     if (entry_position_error_relax_x.size() > 0) {
@@ -323,6 +308,17 @@ namespace Needle {
                                                             entry_position_error_relax_z[i]));
       }
     }
+
+    if (this->entry_orientation_error_relax.size() < this->n_needles)
+    {
+      this->entry_orientation_error_relax = vector<double>(this->n_needles, this->entry_orientation_error_relax[0]);
+    }
+
+    if (this->final_distance_error_relax.size() < this->n_needles)
+    {
+      this->final_distance_error_relax = vector<double>(this->n_needles, this->final_distance_error_relax[0]);
+    }
+
 
     trajopt::SetUserData(*env, "trajopt_cc_hash", CollisionHashPtr(new NeedleCollisionHash(helper)));
   }
@@ -359,7 +355,6 @@ namespace Needle {
 
         for (int i = 0; i < n_needles; ++i)
         {
-          cout << "index " << i << endl;
           trajopt::SetUserData(*this->env, "trajopt_cc", OpenRAVE::UserDataPtr());
           this->managed_kinbodies.clear();
           
@@ -384,12 +379,6 @@ namespace Needle {
           helper->robots.push_back(this->env->ReadRobotURI(RobotBasePtr(), this->robot_file_path));
           
           this->env->Add(helper->robots.back(), true);
-          /*
-          if (!this->is_first_needle_run && i == 0) { // fix entry position if not first run
-            helper->entry_position_error_relax.front() = Vector3d::Zero();
-            helper->entry_orientation_error_relax.front() = 0;
-          }
-          */
 
           for (int j = 0; j < states.size(); ++j)
           {
@@ -436,7 +425,7 @@ namespace Needle {
             cout << "Needle " << i << " converged" << endl;
           }
 
-          prev_converged[i] = status == OPT_CONVERGED;
+          prev_converged[i] = (status == OPT_CONVERGED);
           for (int j = 0; j < helper->robots.size(); ++j)
           {
             robots.push_back(helper->robots[j]);
@@ -476,35 +465,31 @@ namespace Needle {
     // simultaneous_planning
 
     trajopt::SetUserData(*env, "trajopt_cc", OpenRAVE::UserDataPtr());
+    this->managed_kinbodies.clear();
     helper->InitParametersFromConsole(this->argc, this->argv);
-    if (current_sim_index > 0 && this->use_colocation_correction) {
-      // use colocation whenever sim index > 0 
-      helper->method = NeedleProblemHelper::Colocation;
-    }
+    helper->method = NeedleProblemHelper::Colocation;
     helper->n_needles = this->n_needles;
     helper->entries = this->entries;
     helper->finals = this->finals;
-    helper->init_trajs = this->init_trajs;
-    helper->init_controls = this->init_controls;
     helper->entry_position_error_relax = this->entry_position_error_relax;
     helper->entry_orientation_error_relax = this->entry_orientation_error_relax;
     helper->final_distance_error_relax = this->final_distance_error_relax;
     helper->Ts = this->Ts;
 
-    if (helper->Ts.front() == 1) {
-      helper->trust_box_size = .01;
+    if (this->separate_planning_first)
+    {
+      helper->init_trajs = this->init_trajs;
+      helper->init_controls = this->init_controls;
+      helper->use_init_traj = false;
+      helper->merit_error_coeff = helper->merit_error_coeff * 10;
     }
-    if (this->deviation > 0.01) {
-      helper->merit_error_coeff = 10;
-    } else {
-      helper->merit_error_coeff = 100;
-      helper->max_merit_coeff_increases -= 2;
+    else
+    {
+      helper->init_trajs = this->init_trajs;
+      helper->init_controls = this->init_controls;
+      helper->use_init_traj = this->use_init_traj;
     }
 
-    if (!this->is_first_needle_run) { // fix entry position if not first run
-      helper->entry_position_error_relax.front() = Vector3d::Zero();
-      helper->entry_orientation_error_relax.front() = 0;
-    }
 
     for (int i = 0; i < n_needles; ++i) {
       helper->robots.push_back(this->env->ReadRobotURI(RobotBasePtr(), this->robot_file_path));
@@ -554,7 +539,7 @@ namespace Needle {
         this->plotter->OptimizerCallback(prob.get(), this->x, this->helper, shared_from_this(), true, vector< vector<Vector6d> >());
       }
       sols = helper->GetSolutions(opt);
-      current_converged = status == OPT_CONVERGED;
+      current_converged = (status == OPT_CONVERGED);
     }
 
     this->x = opt.x();
@@ -687,6 +672,8 @@ namespace Needle {
         (expUp(this->finals[0]).topRightCorner<3, 1>() -
         expUp(new_state).topRightCorner<3, 1>()).norm();
       this->Ts.erase(this->Ts.begin());
+      this->init_controls.erase(this->init_controls.begin());
+      this->init_trajs.erase(this->init_trajs.begin());
       this->entries.erase(this->entries.begin());
       this->finals.erase(this->finals.begin());
       this->entry_position_error_relax.erase(this->entry_position_error_relax.begin());

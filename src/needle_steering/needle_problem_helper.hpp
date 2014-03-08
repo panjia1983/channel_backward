@@ -18,7 +18,12 @@ namespace Needle {
     double coeff_rotation;
     double coeff_rotation_regularization;
     double coeff_curvature;
-    double coeff_curvature_regularization;
+    double coeff_rotation_continuity;
+    double coeff_rotation_continuity_regularization;
+    double coeff_curvature_continuity;
+
+    int max_iter;
+
     double coeff_speed;
     double coeff_orientation_error;
     double improve_ratio_threshold;
@@ -28,6 +33,7 @@ namespace Needle {
     int max_merit_coeff_increases;
     double trust_box_size;
     bool record_trust_region_history;
+    double cnt_tolerance;
     vector<int> Ts;
     int n_dof;
     int method;
@@ -36,6 +42,8 @@ namespace Needle {
     bool verbose;
     bool continuous_collision;
     bool channel_planning;
+    bool channel_continuity;
+
     double env_transparency;
     double r_min;
     vector<string> ignored_kinbody_names;
@@ -82,13 +90,15 @@ namespace Needle {
     void InitTrajectory(OptProb& prob, NeedleProblemInstancePtr pi);
     void AddRotationCost(OptProb& prob, NeedleProblemInstancePtr pi);
     void AddCurvatureCost(OptProb& prob, NeedleProblemInstancePtr pi);
+    void AddRotationContinuityCost(OptProb& prob, NeedleProblemInstancePtr pi);
+    void AddCurvatureContinuityCost(OptProb& prob, NeedleProblemInstancePtr pi);
     void AddRotationConstraint(OptProb& prob, NeedleProblemInstancePtr pi);
     void AddCurvatureConstraint(OptProb& prob, NeedleProblemInstancePtr helper);
 
 
     void AddSpeedCost(OptProb& prob, NeedleProblemInstancePtr pi);
-    void AddEntryConstraint(OptProb& prob, NeedleProblemInstancePtr pi);
     void AddChannelConstraint(OptProb& prob, NeedleProblemInstancePtr pi);
+    void AddEntryConstraint(OptProb& prob, NeedleProblemInstancePtr pi);
     void AddControlConstraint(OptProb& prob, NeedleProblemInstancePtr pi);
     void AddLinearizedControlConstraint(OptProb& prob, NeedleProblemInstancePtr pi);
     void AddCollisionConstraint(OptProb& prob, NeedleProblemInstancePtr pi);
