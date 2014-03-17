@@ -258,21 +258,38 @@ namespace Needle {
   ChannelSurfaceDistance::ChannelSurfaceDistance(LocalConfigurationPtr cfg, NeedleProblemHelperPtr helper) : cfg(cfg), helper(helper) {}
 
   VectorXd ChannelSurfaceDistance::operator()(const VectorXd& a) const {
+
     Matrix4d current_pose = cfg->pose * expUp(a);
     Vector3d position = current_pose.block<3, 1>(0, 3);
     double x = position.x(), y = position.y(), z = position.z();
-    if (z > helper->channel_height) {
-      double distance_error = x*x+y*y+(z-helper->channel_height)*(z-helper->channel_height) - (helper->channel_radius-0.2)*(helper->channel_radius-0.2);
+    if (z > helper->channel_environment_height) {
+      double distance_error = x*x+y*y+(z-helper->channel_environment_height)*(z-helper->channel_environment_height) - (helper->channel_environment_radius)*(helper->channel_environment_radius);
       VectorXd ret(3); ret << distance_error, 0, 0;
       return ret;
     } else {
-      double xyerror = x*x+y*y - (helper->channel_radius-0.2)*(helper->channel_radius-0.2);
-      double zerror1 = z - helper->channel_height;
-      double zerror2 = -0.2 - z;
+      double xyerror = x*x+y*y - (helper->channel_environment_radius)*(helper->channel_environment_radius);
+      double zerror1 = z - helper->channel_environment_height;
+      double zerror2 = -z;
       VectorXd ret(3); ret << xyerror, zerror1, zerror2;
       return ret;
     }
 
+    /*
+
+    Matrix4d current_pose = cfg->pose * expUp(a);
+    Vector3d position = current_pose.block<3, 1>(0, 3);
+    double x = position.x(), y = position.y(), z = position.z();
+    if (z > helper->channel_environment_height) {
+      double distance_error = x*x+y*y+(z-helper->channel_environment_height)*(z-helper->channel_environment_height) - (helper->channel_environment_radius)*(helper->channel_environment_radius);
+      VectorXd ret(1); ret << distance_error;
+      return ret;
+    } else {
+      double xyerror = x*x+y*y - (helper->channel_environment_radius)*(helper->channel_environment_radius);
+      VectorXd ret(1); ret << xyerror;
+      return ret;
+    }
+
+    */
   }
 
 

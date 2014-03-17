@@ -377,6 +377,160 @@ namespace Needle {
   }
 
 
+  void saveExtendedObstacles(const string& original_filename,
+                             const std::vector<Matrix4d>& transf,
+                             const Vector3d& translation,
+                             double density,
+                             double cylinder_radius,
+                             double cylinder_height,
+                             double rotation_axis_pos,
+                             std::size_t n,
+                             const string& filename)
+  {
+    TiXmlDocument doc;
+    doc.LoadFile(original_filename);
+
+    TiXmlElement* env_elem = doc.RootElement();
+
+    for (int i = 0; i < transf.size(); ++i)
+    {
+      {
+        stringstream body_id;
+        body_id << i;
+
+        TiXmlElement* kinbody_elem = new TiXmlElement("KinBody");
+        kinbody_elem->SetAttribute("name", "KinBody"+body_id.str());
+
+        env_elem->LinkEndChild(kinbody_elem);
+
+
+        //double delta = 0.5 * 2 * cylinder_radius * n - cylinder_radius;
+        double delta = rotation_axis_pos;
+
+
+        TiXmlElement* body_elem = new TiXmlElement("Body");
+        body_elem->SetAttribute("name", "Body"+body_id.str());
+        body_elem->SetAttribute("type", "dynamic");
+        kinbody_elem->LinkEndChild(body_elem);
+
+
+        TiXmlElement* rotation_elem = new TiXmlElement("RotationMat");
+        body_elem->LinkEndChild(rotation_elem);
+        {
+          stringstream rotmat_v;
+          for (int k = 0; k < 3; ++k)
+            for (int l  = 0; l < 3; ++l)
+              rotmat_v << transf[i](k, l) << " ";
+          TiXmlText* rotation_value_elem = new TiXmlText(rotmat_v.str());
+          rotation_elem->LinkEndChild(rotation_value_elem);
+        }
+
+        TiXmlElement* translation_elem = new TiXmlElement("Translation");
+        body_elem->LinkEndChild(translation_elem);
+        {
+          stringstream trans_v;
+          Vector3d new_trans = transf[i].topLeftCorner(3, 3) * translation + transf[i].topRightCorner(3, 1);
+          trans_v << new_trans(0) << " " << new_trans(1) << " " << new_trans(2);
+          TiXmlText* translation_value_elem = new TiXmlText(trans_v.str());
+          translation_elem->LinkEndChild(translation_value_elem);
+        }
+
+        TiXmlElement* mass_elem = new TiXmlElement("Mass");
+        mass_elem->SetAttribute("type", "mimicgeom");
+        body_elem->LinkEndChild(mass_elem);
+        {
+          TiXmlElement* density_elem = new TiXmlElement("density");
+          mass_elem->LinkEndChild(density_elem);
+
+          stringstream density_v;
+          density_v << density;
+          TiXmlText* density_value_elem = new TiXmlText(density_v.str());
+          density_elem->LinkEndChild(density_value_elem);
+        }
+
+
+
+        for (std::size_t i = 0; i < n; ++i)
+        {
+          stringstream id_v;
+          id_v << i;
+
+          TiXmlElement* cylinder_elem = new TiXmlElement("Geom");
+          cylinder_elem->SetAttribute("type", "cylinder");
+          body_elem->LinkEndChild(cylinder_elem);
+          {
+            TiXmlElement* radius_elem = new TiXmlElement("radius");
+            cylinder_elem->LinkEndChild(radius_elem);
+
+            stringstream radius_v;
+            radius_v << cylinder_radius;
+            TiXmlText* radius_value_elem = new TiXmlText(radius_v.str());
+            radius_elem->LinkEndChild(radius_value_elem);
+
+
+            TiXmlElement* height_elem = new TiXmlElement("height");
+            cylinder_elem->LinkEndChild(height_elem);
+
+            stringstream height_v;
+            height_v << cylinder_height;
+            TiXmlText* height_value_elem = new TiXmlText(height_v.str());
+            height_elem->LinkEndChild(height_value_elem);
+
+
+            TiXmlElement* translation_elem = new TiXmlElement("translation");
+            cylinder_elem->LinkEndChild(translation_elem);
+            {
+              stringstream trans_v;
+              trans_v << i * cylinder_radius * 2 - delta << " " << 0 << " " << 0;
+              TiXmlText* translation_value_elem = new TiXmlText(trans_v.str());
+              translation_elem->LinkEndChild(translation_value_elem);
+            }
+
+
+            TiXmlElement* rotationaxis_elem = new TiXmlElement("rotationaxis");
+            cylinder_elem->LinkEndChild(rotationaxis_elem);
+
+            TiXmlText* rotation_axis_value_elem = new TiXmlText("1 0 0 90");
+            rotationaxis_elem->LinkEndChild(rotation_axis_value_elem);
+          }
+
+
+          TiXmlElement* sphere_elem = new TiXmlElement("Geom");
+          sphere_elem->SetAttribute("type", "sphere");
+          body_elem->LinkEndChild(sphere_elem);
+          {
+            TiXmlElement* translation_elem = new TiXmlElement("translation");
+            sphere_elem->LinkEndChild(translation_elem);
+            {
+              stringstream trans_v;
+              trans_v << i * cylinder_radius * 2 - delta << " " << 0 << " " << 0.5 * cylinder_height;
+              TiXmlText* translation_value_elem = new TiXmlText(trans_v.str());
+              translation_elem->LinkEndChild(translation_value_elem);
+            }
+
+
+            TiXmlElement* radius_elem = new TiXmlElement("radius");
+            sphere_elem->LinkEndChild(radius_elem);
+
+            stringstream radius_v;
+            radius_v << cylinder_radius;
+            TiXmlText* radius_value_elem = new TiXmlText(radius_v.str());
+            radius_elem->LinkEndChild(radius_value_elem);
+          }
+        }
+      }
+    }
+
+
+    bool succ = doc.SaveFile(filename.c_str());
+    if (!succ) cout << "save failed" << endl;
+    else cout << "save succ 2" << endl;
+    doc.Clear();
+
+  }
+
+
+
   void saveMultiChannelBot2(const Vector3d& translation,
                             double density,
                             double cylinder_radius,
@@ -623,6 +777,7 @@ namespace Needle {
         }
 
         poses_per_traj.push_back(pose);
+        //cout << pose << endl;
 
         if (i < n_frames - 1)
         {
@@ -633,8 +788,9 @@ namespace Needle {
             string line;
             getline(input, line);
 
-            if(line.size() > 0)
+            if(line.size() > 1)
             {
+              // cout << line.size() << endl;
               istringstream ss(line);
 
               vector<double> control_data;

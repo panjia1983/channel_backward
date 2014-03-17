@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="ASCII" ?>
+<Environment>
+    <KinBody name="obstacle2">
+        <Body type="dynamic" name="sphere_obs">
+            <Translation>1.7 0.44645 5.55355</Translation>
+            <Geom type="sphere">
+                <radius>0.2</radius>
+            </Geom>
+        </Body>
+    </KinBody>
+    <KinBody>
+        <Body name="Body0" type="dynamic">
+            <Translation>-0.25 0 0</Translation>
+            <Mass type="mimicgeom">
+                <density>1</density>
+            </Mass>
+            <Geom type="box">
+                <extents>0.5 0.125 0.25</extents>
+                <translation>0 0 0</translation>
+            </Geom>
+        </Body>
+    </KinBody>
+    <KinBody>
+        <Body name="Body1" type="dynamic">
+            <Translation>-0.25 0 0</Translation>
+            <Mass type="mimicgeom">
+                <density>1</density>
+            </Mass>
+            <Geom type="box">
+                <extents>0.5 0.125 0.25</extents>
+                <translation>0 0 0</translation>
+            </Geom>
+        </Body>
+    </KinBody>
+    <KinBody>
+        <Body name="Body2" type="dynamic">
+            <Translation>-0.25 0 0</Translation>
+            <Mass type="mimicgeom">
+                <density>1</density>
+            </Mass>
+            <Geom type="box">
+                <extents>0.5 0.125 0.25</extents>
+                <translation>0 0 0</translation>
+            </Geom>
+        </Body>
+    </KinBody>
+    <KinBody>
+        <Body name="Body3" type="dynamic">
+            <Translation>-0.25 0 0</Translation>
+            <Mass type="mimicgeom">
+                <density>1</density>
+            </Mass>
+            <Geom type="box">
+                <extents>0.5 0.125 0.25</extents>
+                <translation>0 0 0</translation>
+            </Geom>
+        </Body>
+    </KinBody>
+    <KinBody>
+        <Body name="Body4" type="dynamic">
+            <Translation>-0.25 0 0</Translation>
+            <Mass type="mimicgeom">
+                <density>1</density>
+            </Mass>
+            <Geom type="box">
+                <extents>0.5 0.125 0.25</extents>
+                <translation>0 0 0</translation>
+            </Geom>
+        </Body>
+    </KinBody>
+</Environment>

@@ -1,0 +1,231 @@
+<?xml version="1.0" encoding="ASCII" ?>
+<Environment>
+    <KinBody name="KinBody0">
+        <Body name="Body0" type="dynamic">
+            <RotationMat>1 0 0 0 0 -1 0 1 3.33067e-16 </RotationMat>
+            <Translation>-0.125 0.5 9.05</Translation>
+            <Mass type="mimicgeom">
+                <density>1</density>
+            </Mass>
+            <Geom type="cylinder">
+                <radius>0.125</radius>
+                <height>1</height>
+                <translation>0 0 0</translation>
+                <rotationaxis>1 0 0 90</rotationaxis>
+            </Geom>
+            <Geom type="sphere">
+                <translation>0 0 0.5</translation>
+                <radius>0.125</radius>
+            </Geom>
+        </Body>
+    </KinBody>
+    <KinBody name="KinBody1">
+        <Body name="Body1" type="dynamic">
+            <RotationMat>1 0 0 0 0 -1 0 1 3.33067e-16 </RotationMat>
+            <Translation>0.125 0.5 9.05</Translation>
+            <Mass type="mimicgeom">
+                <density>1</density>
+            </Mass>
+            <Geom type="cylinder">
+                <radius>0.125</radius>
+                <height>1</height>
+                <translation>0 0 0</translation>
+                <rotationaxis>1 0 0 90</rotationaxis>
+            </Geom>
+            <Geom type="sphere">
+                <translation>0 0 0.5</translation>
+                <radius>0.125</radius>
+            </Geom>
+        </Body>
+    </KinBody>
+    <KinBody name="KinBody2">
+        <Body name="Body2" type="dynamic">
+            <RotationMat>8.83239e-06 -1 -1.8293e-06 -0.707108 -7.53896e-06 0.707105 -0.707105 -4.95192e-06 -0.707108 </RotationMat>
+            <Translation>-1.8 0.534832 6.14195</Translation>
+            <Mass type="mimicgeom">
+                <density>1</density>
+            </Mass>
+            <Geom type="cylinder">
+                <radius>0.125</radius>
+                <height>1</height>
+                <translation>0 0 0</translation>
+                <rotationaxis>1 0 0 90</rotationaxis>
+            </Geom>
+            <Geom type="sphere">
+                <translation>0 0 0.5</translation>
+                <radius>0.125</radius>
+            </Geom>
+        </Body>
+    </KinBody>
+    <KinBody name="KinBody3">
+        <Body name="Body3" type="dynamic">
+            <RotationMat>8.83239e-06 -1 -1.8293e-06 -0.707108 -7.53896e-06 0.707105 -0.707105 -4.95192e-06 -0.707108 </RotationMat>
+            <Translation>-1.8 0.358057 5.96517</Translation>
+            <Mass type="mimicgeom">
+                <density>1</density>
+            </Mass>
+            <Geom type="cylinder">
+                <radius>0.125</radius>
+                <height>1</height>
+                <translation>0 0 0</translation>
+                <rotationaxis>1 0 0 90</rotationaxis>
+            </Geom>
+            <Geom type="sphere">
+                <translation>0 0 0.5</translation>
+                <radius>0.125</radius>
+            </Geom>
+        </Body>
+    </KinBody>
+    <KinBody name="KinBody4">
+        <Body name="Body4" type="dynamic">
+            <RotationMat>8.83239e-06 1 1.8293e-06 0.707108 -7.53896e-06 0.707105 0.707105 -4.95192e-06 -0.707108 </RotationMat>
+            <Translation>1.8 0.358057 5.46517</Translation>
+            <Mass type="mimicgeom">
+                <density>1</density>
+            </Mass>
+            <Geom type="cylinder">
+                <radius>0.125</radius>
+                <height>1</height>
+                <translation>0 0 0</translation>
+                <rotationaxis>1 0 0 90</rotationaxis>
+            </Geom>
+            <Geom type="sphere">
+                <translation>0 0 0.5</translation>
+                <radius>0.125</radius>
+            </Geom>
+        </Body>
+    </KinBody>
+    <KinBody name="KinBody5">
+        <Body name="Body5" type="dynamic">
+            <RotationMat>8.83239e-06 1 1.8293e-06 0.707108 -7.53896e-06 0.707105 0.707105 -4.95192e-06 -0.707108 </RotationMat>
+            <Translation>1.8 0.534832 5.64195</Translation>
+            <Mass type="mimicgeom">
+                <density>1</density>
+            </Mass>
+            <Geom type="cylinder">
+                <radius>0.125</radius>
+                <height>1</height>
+                <translation>0 0 0</translation>
+                <rotationaxis>1 0 0 90</rotationaxis>
+            </Geom>
+            <Geom type="sphere">
+                <translation>0 0 0.5</translation>
+                <radius>0.125</radius>
+            </Geom>
+        </Body>
+    </KinBody>
+    <KinBody name="KinBody6">
+        <Body name="Body6" type="dynamic">
+            <RotationMat>8.83239e-06 1 1.8293e-06 0.707108 -7.53896e-06 0.707105 0.707105 -4.95192e-06 -0.707108 </RotationMat>
+            <Translation>1.7 -1.64194 6.86517</Translation>
+            <Mass type="mimicgeom">
+                <density>1</density>
+            </Mass>
+            <Geom type="cylinder">
+                <radius>0.125</radius>
+                <height>1</height>
+                <translation>0 0 0</translation>
+                <rotationaxis>1 0 0 90</rotationaxis>
+            </Geom>
+            <Geom type="sphere">
+                <translation>0 0 0.5</translation>
+                <radius>0.125</radius>
+            </Geom>
+        </Body>
+    </KinBody>
+    <KinBody name="KinBody7">
+        <Body name="Body7" type="dynamic">
+            <RotationMat>8.83239e-06 1 1.8293e-06 0.707108 -7.53896e-06 0.707105 0.707105 -4.95192e-06 -0.707108 </RotationMat>
+            <Translation>1.7 -1.46517 7.04195</Translation>
+            <Mass type="mimicgeom">
+                <density>1</density>
+            </Mass>
+            <Geom type="cylinder">
+                <radius>0.125</radius>
+                <height>1</height>
+                <translation>0 0 0</translation>
+                <rotationaxis>1 0 0 90</rotationaxis>
+            </Geom>
+            <Geom type="sphere">
+                <translation>0 0 0.5</translation>
+                <radius>0.125</radius>
+            </Geom>
+        </Body>
+    </KinBody>
+    <KinBody name="KinBody8">
+        <Body name="Body8" type="dynamic">
+            <RotationMat>-1.11022e-16 1 2.35514e-16 1 0 -5.1307e-16 -2.91025e-16 4.57558e-16 -1 </RotationMat>
+            <Translation>-1.8 -0.425 6.4</Translation>
+            <Mass type="mimicgeom">
+                <density>1</density>
+            </Mass>
+            <Geom type="cylinder">
+                <radius>0.125</radius>
+                <height>1</height>
+                <translation>0 0 0</translation>
+                <rotationaxis>1 0 0 90</rotationaxis>
+            </Geom>
+            <Geom type="sphere">
+                <translation>0 0 0.5</translation>
+                <radius>0.125</radius>
+            </Geom>
+        </Body>
+    </KinBody>
+    <KinBody name="KinBody9">
+        <Body name="Body9" type="dynamic">
+            <RotationMat>-1.11022e-16 1 2.35514e-16 1 0 -5.1307e-16 -2.91025e-16 4.57558e-16 -1 </RotationMat>
+            <Translation>-1.8 -0.175 6.4</Translation>
+            <Mass type="mimicgeom">
+                <density>1</density>
+            </Mass>
+            <Geom type="cylinder">
+                <radius>0.125</radius>
+                <height>1</height>
+                <translation>0 0 0</translation>
+                <rotationaxis>1 0 0 90</rotationaxis>
+            </Geom>
+            <Geom type="sphere">
+                <translation>0 0 0.5</translation>
+                <radius>0.125</radius>
+            </Geom>
+        </Body>
+    </KinBody>
+    <KinBody name="KinBody10">
+        <Body name="Body10" type="dynamic">
+            <RotationMat>0.70711 -0.707104 -3.3769e-06 -0.707104 -0.70711 -8.15259e-06 3.3769e-06 8.15259e-06 -1 </RotationMat>
+            <Translation>-1.68838 -1.5116 7.3</Translation>
+            <Mass type="mimicgeom">
+                <density>1</density>
+            </Mass>
+            <Geom type="cylinder">
+                <radius>0.125</radius>
+                <height>1</height>
+                <translation>0 0 0</translation>
+                <rotationaxis>1 0 0 90</rotationaxis>
+            </Geom>
+            <Geom type="sphere">
+                <translation>0 0 0.5</translation>
+                <radius>0.125</radius>
+            </Geom>
+        </Body>
+    </KinBody>
+    <KinBody name="KinBody11">
+        <Body name="Body11" type="dynamic">
+            <RotationMat>0.70711 -0.707104 -3.3769e-06 -0.707104 -0.70711 -8.15259e-06 3.3769e-06 8.15259e-06 -1 </RotationMat>
+            <Translation>-1.51161 -1.68838 7.3</Translation>
+            <Mass type="mimicgeom">
+                <density>1</density>
+            </Mass>
+            <Geom type="cylinder">
+                <radius>0.125</radius>
+                <height>1</height>
+                <translation>0 0 0</translation>
+                <rotationaxis>1 0 0 90</rotationaxis>
+            </Geom>
+            <Geom type="sphere">
+                <translation>0 0 0.5</translation>
+                <radius>0.125</radius>
+            </Geom>
+        </Body>
+    </KinBody>
+</Environment>

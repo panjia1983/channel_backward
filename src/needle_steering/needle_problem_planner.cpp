@@ -56,6 +56,9 @@ namespace Needle {
     rotation_axis_index = -1;
     simultaneous_planning = false;
     
+    double channel_radius = 0.1;
+    double channel_height = 0.5;
+
     Config config;
     config.add(new Parameter<bool>("stage_plotting", &this->stage_plotting, "stage_plotting"));
     config.add(new Parameter<bool>("seq_result_plotting", &this->seq_result_plotting, "seq_result_plotting"));
@@ -84,6 +87,9 @@ namespace Needle {
     config.add(new Parameter<int>("T", &T, "T"));
     config.add(new Parameter<int>("max_sequential_solves", &max_sequential_solves, "max_sequential_solves"));
     config.add(new Parameter<double>("rotation_axis_index", &rotation_axis_index, "rotation_axis_index"));
+    config.add(new Parameter<double>("channel_radius", &channel_radius, "channel_radius"));
+    config.add(new Parameter<double>("channel_height", &channel_height, "channel_height"));
+
 
     CommandParser parser(config);
     parser.read(argc, argv, true);
@@ -160,32 +166,10 @@ namespace Needle {
       assert(viewer);
     }
 
-    this->env->Load(this->env_file_path);
-
-    if (this->stage_plotting || this->stage_result_plotting ) {
-      viewer->SetAllTransparency(this->env_transparency);
-    }
 
 
-    if (channel_planning)
-    {
-      Vector3d t;
-      t << 0, 0, 0;
-      double radius = 0.1;
-      double height = 0.5;
-      double density = 1;
-      double rotation_axis_pos;
 
-      // rotation_axis_pos = (this->n_channels - 1) * radius; // center
-      // rotation_axis_pos = 2*(this->n_channels - 1) * radius // channel n-1
-      //rotation_axis_pos = 0; // channel 0
 
-      rotation_axis_pos = radius * 2 * this->rotation_axis_index;
-      saveMultiChannelBot(t, density, radius, height, rotation_axis_pos, this->n_channels, this->data_dir + "/test.xml");
-      this->robot_file_path = this->data_dir + "/test.xml";
-    }
-
-    KinBodyPtr robot = this->env->ReadRobotURI(RobotBasePtr(), this->robot_file_path);
 
     if (this->init_traj_path == "")
     {
@@ -231,7 +215,6 @@ namespace Needle {
       this->entries.clear();
       this->finals.clear();
 
-
       for (int i = 0; i < n_needles; ++i)
       {
         DblVec entry_vec;
@@ -252,17 +235,13 @@ namespace Needle {
       {
         vector<Vector6d> traj;
         for (size_t j = 0; j < trajs[i].size(); ++j)
+        {
           traj.push_back(logDown(trajs[i][j]));
+        }
         this->init_trajs.push_back(traj);
         this->init_controls.push_back(controls[i]);
         this->finals.push_back(traj[0]);
       }
-
-
-      /*
-      cout << this->entries[0].transpose() << endl;
-      cout << this->finals[0].transpose() << endl;
-      */
 
       // if has initial traj, then just use that T
       if (this->use_init_traj)
@@ -275,16 +254,56 @@ namespace Needle {
         for (int i = 0; i < n_needles; ++i)
           this->Ts.push_back(T);
       }
-
-      /*
-      cout << this->n_needles << endl;
-      for (int i = 0; i < n_needles; ++i)
-      {
-        cout << this->Ts[i] << " " << this->init_controls[i].size() << " " << this->init_trajs[i].size() << endl;
-      }
-      */
     }
 
+
+    if (channel_planning)
+    {
+      Vector3d t;
+      t << 0, 0, 0;
+      double radius = channel_radius;
+      double height = channel_height;
+      double density = 1;
+      double rotation_axis_pos;
+
+      // rotation_axis_pos = (this->n_channels - 1) * radius; // center
+      // rotation_axis_pos = 2*(this->n_channels - 1) * radius // channel n-1
+      //rotation_axis_pos = 0; // channel 0
+
+
+
+      rotation_axis_pos = radius * 2 * this->rotation_axis_index;
+      saveMultiChannelBot(t, density, radius, height, rotation_axis_pos, this->n_channels, this->data_dir + "/robot_.xml");
+      this->robot_file_path = this->data_dir + "/robot_.xml";
+
+
+      /// adding final obstacles.
+      /*
+      std::vector<Matrix4d> end_obs_transforms;
+
+      double end_obs_height = 1;
+      for (size_t i = 0; i < this->finals.size(); ++i)
+      {
+        Matrix4d tf = expUp(this->finals[i]);
+        Vector3d axis; axis << tf(0, 2), tf(1, 2), tf(2, 2);
+        Vector3d trans = tf.block<3, 1>(0, 3);
+        trans -= end_obs_height * axis;
+        tf.block<3, 1>(0, 3) = trans;
+        end_obs_transforms.push_back(tf);
+      }
+
+      saveExtendedObstacles(this->env_file_path, end_obs_transforms, t, density, radius, end_obs_height, rotation_axis_pos, this->n_channels, this->data_dir + "/env_.xml");
+      this->env_file_path = this->data_dir + "/env_.xml";
+       */
+    }
+
+    this->env->Load(this->env_file_path);
+
+    if (this->stage_plotting || this->stage_result_plotting ) {
+      viewer->SetAllTransparency(this->env_transparency);
+    }
+
+    KinBodyPtr robot = this->env->ReadRobotURI(RobotBasePtr(), this->robot_file_path);
 
 
 
@@ -308,6 +327,7 @@ namespace Needle {
                                                             entry_position_error_relax_z[i]));
       }
     }
+
 
     if (this->entry_orientation_error_relax.size() < this->n_needles)
     {
@@ -458,10 +478,6 @@ namespace Needle {
 
     current_converged = all_converged;
 
-//    if (this->channel_planning && !this->simultaneous_planning) {
-//      return sols;
-//    }
-
     // simultaneous_planning
 
     trajopt::SetUserData(*env, "trajopt_cc", OpenRAVE::UserDataPtr());
@@ -513,15 +529,6 @@ namespace Needle {
       {
         helper->SetSolutions(initial, opt);
       }
-      else
-      {
-        vector<VectorXd> cursols = helper->GetSolutions(opt);
-        for (int i = 0; i < cursols.size(); ++i)
-        {
-          cursols[i] = PerturbSolution(cursols[i]);
-        }
-        helper->SetSolutions(cursols, opt);
-      }
     }
 
 
@@ -543,6 +550,25 @@ namespace Needle {
     }
 
     this->x = opt.x();
+
+    for (int i = 0; i < this->helper->pis.size(); ++i)
+    {
+      cout << this->helper->pis[i]->T+1 << endl;
+
+
+      for (int j = 0; j < this->helper->pis[i]->T; ++j)
+      {
+        double phi = this->helper->GetPhi(this->x, j, this->helper->pis[i]);
+        double Delta = this->helper->GetDelta(this->x, j, this->helper->pis[i]);
+        double curvature = this->helper->GetCurvature(this->x, j, this->helper->pis[i]);
+
+        cout << this->helper->pis[i]->local_configs[j]->pose << endl;
+        cout << Delta << " " << curvature << " " << phi << endl;
+        cout << endl;
+      }
+      cout << this->helper->pis[i]->local_configs[this->helper->pis[i]->T]->pose << endl;
+      cout << endl;
+    }
 
     return sols;
 

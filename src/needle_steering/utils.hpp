@@ -40,6 +40,16 @@ namespace Needle {
                             std::size_t n,
                             const string& filename);
 
+  void saveExtendedObstacles(const string& original_filename,
+                             const std::vector<Matrix4d>& tranfs,
+                             const Vector3d& translation,
+                             double density,
+                             double cylinder_radius,
+                             double cylinder_height,
+                             double rotation_axis_pos,
+                             std::size_t n,
+                             const string& filename);
+
   void readInitTraj(const string& filename, vector<vector<Matrix4d> >& trajs, vector<vector<VectorXd> >& controls);
 
 

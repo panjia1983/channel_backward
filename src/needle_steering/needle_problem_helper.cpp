@@ -161,13 +161,6 @@ namespace Needle {
 
         if (this->use_init_traj)
         {
-          // Initialize phivars
-          /*
-          cout << pi->init_control.size();
-          cout << pi->T << endl;
-          cout << pi->local_configs.size() << endl;
-          */
-
           for (int i = 0; i < pi->T; ++i)
           {
             pi->initVec.push_back(pi->init_control[i](2));
@@ -242,7 +235,9 @@ namespace Needle {
             pis[i]->local_configs[j]->pose = pis[i]->local_configs[j]->pose * expUp(twistvals.row(j-1));
           }
 
-          cout << pis[i]->T+1 << endl;
+          //cout << pis[i]->T+1 << endl;
+
+
           for (int j = 0; j < pis[i]->T; ++j)
           {
             double phi = GetPhi(x, j, pis[i]);
@@ -252,9 +247,12 @@ namespace Needle {
             pis[i]->local_configs[j]->Delta = Delta;
             pis[i]->local_configs[j]->curvature = curvature;
 
-            cout << Delta << " " << curvature << " " << phi << endl;
+            //cout << pis[i]->local_configs[j]->pose << endl;
+            //cout << Delta << " " << curvature << " " << phi << endl;
+            //cout << endl;
           }
-          cout << endl;
+          //cout << pis[i]->local_configs[pis[i]->T]->pose << endl;
+          //cout << endl;
 
           setVec(x, pis[i]->twistvars.m_data, DblVec(pis[i]->twistvars.size(), 0));
 
@@ -268,7 +266,7 @@ namespace Needle {
 
           pis[i]->local_configs[0]->pose = expUp(pis[i]->final);
 
-          cout << pis[i]->T+1 << endl;
+          //cout << pis[i]->T+1 << endl;
           for (int j = 1; j <= pis[i]->T; ++j) {
             double phi = GetPhi(x, j-1, pis[i]);
             double Delta = GetDelta(x, j-1, pis[i]);
@@ -277,10 +275,10 @@ namespace Needle {
             pis[i]->local_configs[j-1]->Delta = Delta;
             pis[i]->local_configs[j-1]->curvature = curvature;
 
-            cout << Delta << " " << curvature << " " << phi << endl;
-            pis[i]->local_configs[j]->pose = TransformPose(pis[i]->local_configs[j-1]->pose, phi, Delta, curvature);
+            //cout << Delta << " " << curvature << " " << phi << endl;
+            //pis[i]->local_configs[j]->pose = TransformPose(pis[i]->local_configs[j-1]->pose, phi, Delta, curvature);
           }
-          cout << endl;
+          //cout << endl;
 
           setVec(x, pis[i]->twistvars.m_data, DblVec(pis[i]->twistvars.size(), 0));
         }
@@ -310,7 +308,14 @@ namespace Needle {
   void NeedleProblemHelper::CreateVariables(OptProb& prob, NeedleProblemInstancePtr pi) {
     AddVarArray(prob, pi->T, n_dof, "twist", pi->twistvars);
     AddVarArray(prob, pi->T, 1, -this->rotation_bound, this->rotation_bound, "phi", pi->phivars);
-    pi->Delta_lb = (expUp(pi->final).topRightCorner<3, 1>() - expUp(pi->entry).topRightCorner<3, 1>()).norm() / pi->T;
+
+    //pi->Delta_lb = (expUp(pi->final).topRightCorner<3, 1>() - expUp(pi->entry).topRightCorner<3, 1>()).norm() / pi->T;
+    //// very special hack for WAFR
+    //Vector3d final = expUp(pi->final).topRightCorner<3, 1>();
+    //pi->Delta_lb = final(2) / pi->T;
+
+    pi->Delta_lb = 0.1;
+
     pi->Deltavar = prob.createVariables(singleton<string>("Delta"), singleton<double>(pi->Delta_lb),singleton<double>(INFINITY))[0];
     AddVarArray(prob, pi->T, 1, -1. / r_min, 1. / r_min, "curvature", pi->curvature_vars);
   }
@@ -331,9 +336,22 @@ namespace Needle {
     }
     else
     {
-      for (int idof = 0; idof < n_dof; ++idof) {
-        initTraj.col(idof) = VectorXd::LinSpaced(pi->T+1, pi->final[idof], pi->entry[idof]);
+      Vector6d entry = pi->entry;
+
+      if(0)
+      {
+        Matrix4d pose = expUp(pi->final);
+        pose(2,3) = 0;
+        entry = logDown(pose);
       }
+
+      for (int idof = 0; idof < n_dof; ++idof)
+      {
+        //initTraj.col(idof) = VectorXd::LinSpaced(pi->T+1, pi->final[idof], pi->entry[idof]);
+        initTraj.col(idof) = VectorXd::LinSpaced(pi->T+1, pi->final[idof], entry[idof]);
+      }
+
+
     }
 
     for (int i = 0; i <= pi->T; ++i) {
@@ -553,9 +571,8 @@ namespace Needle {
     this->total_rotation_limit = 3.14;
     this->rotation_bound = PI;
 
-    this->channel_radius = 2.5;
-    this->channel_height = 10;
-    this->channel_safety_margin = 0.25;
+    this->channel_environment_radius = 2.5;
+    this->channel_environment_height = 10;
     this->channel_planning = true;
     this->channel_continuity = false;
 

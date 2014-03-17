@@ -56,9 +56,8 @@ namespace Needle {
     double total_rotation_limit;
     double rotation_bound;
 
-    double channel_radius;
-    double channel_height;
-    double channel_safety_margin;
+    double channel_environment_radius;
+    double channel_environment_height;
     vector<KinBodyPtr> robots;
 
     vector<NeedleProblemInstancePtr> pis;
