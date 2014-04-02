@@ -85,7 +85,7 @@ namespace Needle {
 
         if (this->channel_continuity)
         {
-          AddCurvatureContinuityCost(prob, pi);
+          //AddCurvatureContinuityCost(prob, pi);
           AddRotationContinuityCost(prob, pi);
         }
 
